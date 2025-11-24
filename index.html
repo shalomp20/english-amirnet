@@ -64,10 +64,13 @@
 
     // השמעת מילה באנגלית
     function speakWord(word) {
-  const utter = new SpeechSynthesisUtterance(word);
-  utter.lang = "en-US";
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(utter);
+  const voices = speechSynthesis.getVoices();
+  utter.voice = voices.find(v =>
+  v.name.toLowerCase().includes("samantha") ||   // מק (נעים יותר)
+  v.name.toLowerCase().includes("google us")     // כרום
+);
+utter.lang = "en-US";
+
 }
 
       const utter = new SpeechSynthesisUtterance(word);

@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8" />
+  <title>Vocabulary Quiz Builder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Tailwind לצורה יפה -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.css" rel="stylesheet" />
+</head>
+<body class="bg-slate-900 text-slate-100">
+  <div id="root"></div>
+
+  <!-- React + ReactDOM + Babel -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- ספריית XLSX לקריאת אקסל -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // ערבוב אקראי של מערך
+    function shuffleArray(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    // פירסינג של טקסט ידני: כל שורה = "word \t תרגום" או "word - תרגום"
+    function parseManualText(raw) {
+      return raw
+        .split(/\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line, index) => {
+          let word = line;
+          let translation = "";
+
+          const tabSplit = line.split(/\t/);
+          if (tabSplit.length >= 2) {
+            word = tabSplit[0];
+            translation = tabSplit.slice(1).join(" ");
+          } else {
+            const dashSplit = line.split(/\s[-–]\s/);
+            if (dashSplit.length >= 2) {
+              word = dashSplit[0];
+              translation = dashSplit.slice(1).join(" ");
+            }
+          }
+
+          return {
+            id: `manual-${Date.now()}-${index}`,
+            word: String(word).trim(),
+            translation: String(translation || "").trim(),
+          };
+        })
+        .filter((c) => c.word);
+    }
+
+    function App() {
+      // cards: { id, word, translation }
+      const [cards, setCards] = useState([]);
+      const [manualText, setManualText] = useState("");
+      const [mode, setMode] = useState("edit"); // "edit" | "practice"
+      const [practiceIndex, setPracticeIndex] = useState(0);
+      const [options, setOptions] = useState([]); // 4 אופציות לשאלה
+      const [selectedOptionId, setSelectedOptionId] = useState(null);
+      const [feedback, setFeedback] = useState("");
+      const [revealed, setRevealed] = useState(false);
+
+      const hasCards = cards.length > 0;
+      const currentCard = hasCards ? cards[practiceIndex] : null;
+
+      // כל פעם שמתחלפת שאלה / רשימת מילים – בונים אופציות
+      useEffect(() => {
+        if (!hasCards || !currentCard) {
+          setOptions([]);
+          return;
+        }
+
+        const others = cards.filter((c, idx) => idx !== practiceIndex);
+        const distractors = shuffleArray(others).slice(
+          0,
+          Math.min(3, others.length)
+        );
+        const combined = shuffleArray([currentCard, ...distractors]);
+
+        setOptions(combined);
+        setSelectedOptionId(null);
+        setFeedback("");
+        setRevealed(false);
+      }, [cards, practiceIndex, hasCards, currentCard]);
+
+      const resetPractice = () => {
+        setPracticeIndex(0);
+        setSelectedOptionId(null);
+        setFeedback("");
+        setRevealed(false);
+      };
+
+      // ייבוא אקסל / CSV
+      const handleFileUpload = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const data = new Uint8Array(evt.target.result);
+          const workbook = XLSX.read(data, { type: "array" });
+          const firstSheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[firstSheetName];
+          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+          const newCards = rows
+            .filter((row) => row && row[0])
+            .map((row, index) => {
+              const word = String(row[0]).trim();
+              const translation = row[1] ? String(row[1]).trim() : "";
+              return {
+                id: `excel-${Date.now()}-${index}`,
+                word,
+                translation,
+              };
+            })
+            .filter((c) => c.word);
+
+          if (newCards.length) {
+            setCards(newCards);
+            resetPractice();
+          }
+        };
+
+        reader.readAsArrayBuffer(file);
+      };
+
+      // ייבוא טקסט ידני
+      const handleUseManualText = () => {
+        const parsed = parseManualText(manualText);
+        if (parsed.length) {
+          setCards(parsed);
+          resetPractice();
+        }
+      };
+
+      const handlePrev = () => {
+        if (!hasCards) return;
+        setPracticeIndex((prev) =>
+          prev - 1 < 0 ? cards.length - 1 : prev - 1
+        );
+      };
+
+      const handleNext = () => {
+        if (!hasCards) return;
+        setPracticeIndex((prev) => (prev + 1) % cards.length);
+      };
+
+      const handleChooseOption = (optionId) => {
+        if (!currentCard || !options.length) return;
+        const chosen = options.find((o) => o.id === optionId);
+        if (!chosen) return;
+
+        setSelectedOptionId(optionId);
+        setRevealed(true);
+
+        if (
+          chosen.word.trim().toLowerCase() ===
+          currentCard.word.trim().toLowerCase()
+        ) {
+          setFeedback("נכון! 🎉");
+        } else {
+          setFeedback(`לא מדויק. המילה הנכונה היא "${currentCard.word}".`);
+        }
+      };
+
+      return (
+        <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-4">
+          <div className="w-full max-w-4xl bg-slate-800 rounded-2xl shadow-xl p-6 md:p-8">
+            <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-semibold mb-1">
+                  Vocabulary Quiz Builder
+                </h1>
+                <p className="text-sm text-slate-300">
+                  ייבוא מילים + תרגום מאקסל, ובניית שאלון אמריקאי עם 4 תשובות.
+                </p>
+              </div>
+
+              <div className="inline-flex rounded-xl bg-slate-700 p-1">
+                <button
+                  className={`px-4 py-2 text-sm rounded-lg transition ${
+                    mode === "edit"
+                      ? "bg-slate-900 text-white"
+                      : "text-slate-200 hover:bg-slate-600"
+                  }`}
+                  onClick={() => setMode("edit")}
+                >
+                  1. ייבוא מילים
+                </button>
+                <button
+                  className={`px-4 py-2 text-sm rounded-lg transition ${
+                    mode === "practice"
+                      ? "bg-slate-900 text-white"
+                      : "text-slate-200 hover:bg-slate-600"
+                  }`}
+                  onClick={() => setMode("practice")}
+                  disabled={!hasCards}
+                >
+                  2. תרגול
+                </button>
+              </div>
+            </header>
+
+            {mode === "edit" && (
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Excel import */}
+                <section className="space-y-3">
+                  <h2 className="text-lg font-medium">ייבוא מאקסל / CSV</h2>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    קובץ אקסל עם גיליון ראשון בפורמט:
+                    <br />
+                    <span className="font-mono">A: English word</span> |{" "}
+                    <span className="font-mono">B: תרגום בעברית</span>
+                  </p>
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={handleFileUpload}
+                    className="w-full text-xs text-slate-200 file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-sky-500 file:text-white hover:file:bg-sky-400"
+                  />
+                  <p className="text-xs text-slate-400">
+                    אחרי בחירת הקובץ תיווצר אוטומטית רשימת הקלפים.
+                  </p>
+
+                  <div className="mt-4 text-xs text-slate-300 border border-slate-700 rounded-xl p-3 bg-slate-900/60">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-semibold">סטטוס מילים</span>
+                      <span className="text-sky-300">{cards.length} מילים</span>
+                    </div>
+                    {cards.length === 0 ? (
+                      <p>עדיין לא נטענו מילים.</p>
+                    ) : (
+                      <ul className="max-h-28 overflow-y-auto space-y-1 pr-1">
+                        {cards.slice(0, 6).map((c) => (
+                          <li
+                            key={c.id}
+                            className="flex justify-between text-[11px]"
+                          >
+                            <span>{c.word}</span>
+                            <span className="text-slate-400">
+                              {c.translation}
+                            </span>
+                          </li>
+                        ))}
+                        {cards.length > 6 && (
+                          <li className="text-[11px] text-slate-500">
+                            ...
+                            ועוד {cards.length - 6} מילים
+                          </li>
+                        )}
+                      </ul>
+                    )}
+                  </div>
+                </section>
+
+                {/* Manual text input */}
+                <section className="space-y-3">
+                  <h2 className="text-lg font-medium">ייבוא ידני (טקסט)</h2>
+                  <p className="text-xs text-slate-300">
+                    כל שורה: מילה באנגלית + תרגום, למשל:
+                  </p>
+                  <pre className="text-[11px] bg-slate-900/80 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 whitespace-pre-wrap">
+brave	אמיץ
+bacteria	חיידק
+vehicle - רכב
+                  </pre>
+                  <textarea
+                    className="w-full h-32 rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm outline-none focus:border-sky-500"
+                    placeholder={`brave\tאמיץ\nbacteria\tחיידק`}
+                    value={manualText}
+                    onChange={(e) => setManualText(e.target.value)}
+                  />
+                  <button
+                    onClick={handleUseManualText}
+                    className="w-full inline-flex items-center justify-center rounded-xl bg-sky-500 hover:bg-sky-400 text-sm font-medium px-4 py-2 transition disabled:opacity-40"
+                    disabled={!manualText.trim()}
+                  >
+                    החלף רשימת מילים לפי הטקסט
+                  </button>
+                </section>
+              </div>
+            )}
+
+            {mode === "practice" && (
+              <div className="mt-4 space-y-4">
+                {!currentCard ? (
+                  <p className="text-sm text-slate-400">
+                    אין מילים לתרגול. חזור ל"ייבוא מילים" וטעין מילים מאקסל או
+                    טקסט.
+                  </p>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between text-xs text-slate-400">
+                      <span>
+                        שאלה {practiceIndex + 1} מתוך {cards.length}
+                      </span>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-700 bg-slate-900/60 p-4 space-y-4">
+                      <div>
+                        <p className="text-sm mb-1">
+                          בחר את המילה באנגלית המתאימה:
+                        </p>
+                        <p className="text-lg font-semibold text-sky-200">
+                          {currentCard.translation || currentCard.word}
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {options.map((opt) => {
+                          const isCorrect =
+                            opt.word.trim().toLowerCase() ===
+                            currentCard.word.trim().toLowerCase();
+                          const isSelected = selectedOptionId === opt.id;
+
+                          return (
+                            <button
+                              key={opt.id}
+                              onClick={() => handleChooseOption(opt.id)}
+                              className={`text-left rounded-xl border px-3 py-2 text-sm transition ${
+                                isSelected
+                                  ? "border-sky-400 bg-slate-800"
+                                  : "border-slate-600 bg-slate-800/60 hover:bg-slate-700"
+                              } ${
+                                revealed && isCorrect ? "border-emerald-400" : ""
+                              }`}
+                            >
+                              <span className="font-medium">{opt.word}</span>
+                              {revealed && (
+                                <span className="block text-[11px] text-slate-300 mt-1">
+                                  {opt.translation || ""}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {feedback && (
+                        <p className="mt-2 text-sm">{feedback}</p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between mt-2">
+                      <div className="space-x-2">
+                        <button
+                          onClick={handlePrev}
+                          className="rounded-xl border border-slate-600 px-3 py-1.5 text-xs hover:bg-slate-700"
+                        >
+                          קודם
+                        </button>
+                        <button
+                          onClick={handleNext}
+                          className="rounded-xl border border-slate-600 px-3 py-1.5 text-xs hover:bg-slate-700"
+                        >
+                          הבא
+                        </button>
+                      </div>
+
+                      <button
+                        onClick={() => setMode("edit")}
+                        className="text-xs text-sky-300 hover:underline"
+                      >
+                        חזרה לייבוא מילים
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>Vocabulary Quiz Builder</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- Tailwind לצורה יפה -->
+  <!-- Tailwind לצורה יפה ומהירה -->
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.css" rel="stylesheet" />
 </head>
 <body class="bg-slate-900 text-slate-100">
@@ -20,6 +20,11 @@
 
   <script type="text/babel">
     const { useState, useEffect } = React;
+
+    // לוודא שהקולות נטענים (עוזר לכרום/מק)
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.onvoiceschanged = () => {};
+    }
 
     // ערבוב אקראי של מערך
     function shuffleArray(array) {
@@ -63,8 +68,30 @@
     }
 
     // השמעת מילה באנגלית
-    
-    
+    function speakWord(word) {
+      if (!("speechSynthesis" in window)) {
+        alert("הדפדפן שלך לא תומך בהקראת טקסט.");
+        return;
+      }
+
+      const utter = new SpeechSynthesisUtterance(word);
+
+      // נסיון לבחור קול יותר נעים, אם קיים
+      const voices = window.speechSynthesis.getVoices() || [];
+      const preferred = voices.find((v) =>
+        v.name.toLowerCase().includes("samantha") ||   // מק
+        v.name.toLowerCase().includes("google us")     // כרום
+      );
+
+      if (preferred) {
+        utter.voice = preferred;
+      }
+
+      utter.lang = "en-US";
+
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utter);
+    }
 
     function App() {
       // תיקיות: { id, name, cards: [{id, word, translation}] }

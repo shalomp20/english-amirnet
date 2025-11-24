@@ -63,16 +63,8 @@
     }
 
     // השמעת מילה באנגלית
-    function speakWord(word) {
-      if (!("speechSynthesis" in window)) {
-        alert("הדפדפן שלך לא תומך בהשמעת קול (speechSynthesis).");
-        return;
-      }
-      const utter = new SpeechSynthesisUtterance(word);
-      utter.lang = "en-US";
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utter);
-    }
+    
+    
 
     function App() {
       // תיקיות: { id, name, cards: [{id, word, translation}] }

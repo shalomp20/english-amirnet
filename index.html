@@ -2,10 +2,13 @@
 <html lang="he">
 <head>
   <meta charset="UTF-8" />
-  <title>Vocabulary Quiz Builder</title>
+  <title>Vocabulary Sentence Quiz</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- Tailwind לצורה יפה ומהירה -->
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.css" rel="stylesheet" />
+  <!-- Tailwind בשביל עיצוב מהיר -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.css"
+    rel="stylesheet"
+  />
 </head>
 <body class="bg-slate-900 text-slate-100">
   <div id="root"></div>
@@ -15,13 +18,13 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <!-- ספריית XLSX לקריאת אקסל -->
+  <!-- ספריית XLSX לקריאת קבצי אקסל / CSV -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <script type="text/babel">
     const { useState, useEffect } = React;
 
-    // לוודא שהקולות נטענים (עוזר לכרום/מק)
+    // לוודא שהקולות נטענים (כרום/מק)
     if ("speechSynthesis" in window) {
       window.speechSynthesis.onvoiceschanged = () => {};
     }
@@ -36,35 +39,27 @@
       return arr;
     }
 
-    // פירסינג של טקסט ידני: כל שורה = "word \t תרגום" או "word - תרגום"
+    // פירסינג של טקסט ידני:
+    // sentence \t word \t translation
     function parseManualText(raw) {
       return raw
         .split(/\n/)
         .map((line) => line.trim())
         .filter(Boolean)
         .map((line, index) => {
-          let word = line;
-          let translation = "";
-
-          const tabSplit = line.split(/\t/);
-          if (tabSplit.length >= 2) {
-            word = tabSplit[0];
-            translation = tabSplit.slice(1).join(" ");
-          } else {
-            const dashSplit = line.split(/\s[-–]\s/);
-            if (dashSplit.length >= 2) {
-              word = dashSplit[0];
-              translation = dashSplit.slice(1).join(" ");
-            }
-          }
+          const parts = line.split(/\t/);
+          const sentence = parts[0] ? String(parts[0]).trim() : "";
+          const word = parts[1] ? String(parts[1]).trim() : "";
+          const translation = parts[2] ? String(parts[2]).trim() : "";
 
           return {
             id: `manual-${Date.now()}-${index}`,
-            word: String(word).trim(),
-            translation: String(translation || "").trim(),
+            sentence,
+            word,
+            translation,
           };
         })
-        .filter((c) => c.word);
+        .filter((c) => c.sentence && c.word);
     }
 
     // השמעת מילה באנגלית
@@ -76,25 +71,24 @@
 
       const utter = new SpeechSynthesisUtterance(word);
 
-      // נסיון לבחור קול יותר נעים, אם קיים
+      // ניסיון לבחור קול נעים אם קיים
       const voices = window.speechSynthesis.getVoices() || [];
       const preferred = voices.find((v) =>
         v.name.toLowerCase().includes("samantha") ||   // מק
         v.name.toLowerCase().includes("google us")     // כרום
       );
-
       if (preferred) {
         utter.voice = preferred;
       }
 
       utter.lang = "en-US";
-
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(utter);
     }
 
     function App() {
-      // תיקיות: { id, name, cards: [{id, word, translation}] }
+      // כרטיס: { id, sentence, word, translation }
+      // תיקיות: { id, name, cards: [...] }
       const [decks, setDecks] = useState(() => [
         { id: "deck-1", name: "Default", cards: [] },
       ]);
@@ -103,12 +97,13 @@
       const [manualText, setManualText] = useState("");
       const [mode, setMode] = useState("edit"); // "edit" | "practice"
       const [practiceIndex, setPracticeIndex] = useState(0);
-      const [options, setOptions] = useState([]); // 4 אופציות לשאלה
+      const [options, setOptions] = useState([]); // 4 כרטיסים כאופציות
       const [selectedOptionId, setSelectedOptionId] = useState(null);
       const [feedback, setFeedback] = useState("");
       const [revealed, setRevealed] = useState(false);
 
-      const activeDeck = decks.find((d) => d.id === activeDeckId) || decks[0];
+      const activeDeck =
+        decks.find((d) => d.id === activeDeckId) || decks[0];
       const cards = activeDeck ? activeDeck.cards : [];
       const hasCards = cards.length > 0;
       const currentCard = hasCards ? cards[practiceIndex] : null;
@@ -140,7 +135,7 @@
         setRevealed(false);
       };
 
-      // עדכון תיקיה פעילה עם כרטיסים חדשים
+      // עדכון תיקייה פעילה עם כרטיסים חדשים
       const replaceCardsInActiveDeck = (newCards) => {
         setDecks((prev) =>
           prev.map((deck) =>
@@ -150,7 +145,8 @@
         resetPractice();
       };
 
-      // ייבוא אקסל / CSV
+      // ייבוא מאקסל / CSV לפי המבנה החדש:
+      // Col A: sentence with ____  |  Col B: word  |  Col C: translation
       const handleFileUpload = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -164,17 +160,20 @@
           const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
           const newCards = rows
-            .filter((row) => row && row[0])
+            .filter((row) => row && row[0] && row[1])
             .map((row, index) => {
-              const word = String(row[0]).trim();
-              const translation = row[1] ? String(row[1]).trim() : "";
+              const sentence = String(row[0]).trim();
+              const word = String(row[1]).trim();
+              const translation = row[2] ? String(row[2]).trim() : "";
+
               return {
                 id: `excel-${Date.now()}-${index}`,
+                sentence,
                 word,
                 translation,
               };
             })
-            .filter((c) => c.word);
+            .filter((c) => c.sentence && c.word);
 
           if (newCards.length) {
             replaceCardsInActiveDeck(newCards);
@@ -184,7 +183,7 @@
         reader.readAsArrayBuffer(file);
       };
 
-      // ייבוא טקסט ידני
+      // ייבוא טקסט ידני (משפט \t מילה \t תרגום)
       const handleUseManualText = () => {
         const parsed = parseManualText(manualText);
         if (parsed.length) {
@@ -218,7 +217,9 @@
         ) {
           setFeedback("נכון! 🎉");
         } else {
-          setFeedback(`לא מדויק. המילה הנכונה היא "${currentCard.word}".`);
+          setFeedback(
+            `לא מדויק. המילה הנכונה היא "${currentCard.word}".`
+          );
         }
       };
 
@@ -256,7 +257,7 @@
         }
         const deck = decks.find((d) => d.id === deckId);
         const ok = confirm(
-          `למחוק את התיקייה "${deck?.name}" וכל המילים שבה?`
+          `למחוק את התיקייה "${deck?.name}" וכל המשפטים שבה?`
         );
         if (!ok) return;
 
@@ -273,13 +274,15 @@
       return (
         <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-4">
           <div className="w-full max-w-5xl bg-slate-800 rounded-2xl shadow-xl p-6 md:p-8">
+            {/* כותרת */}
             <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
               <div>
                 <h1 className="text-2xl md:text-3xl font-semibold mb-1">
-                  Vocabulary Quiz Builder
+                  Vocabulary Sentence Quiz
                 </h1>
                 <p className="text-sm text-slate-300">
-                  תיקיות מילים, ייבוא מאקסל/טקסט, שאלון אמריקאי עם אודיו באנגלית.
+                  מייבא משפט עם רווח ריק, מילה באנגלית ותרגום. השאלה היא המשפט,
+                  התשובות הן המילים, והתרגום מופיע אחרי הבחירה.
                 </p>
               </div>
 
@@ -352,6 +355,7 @@
               </button>
             </section>
 
+            {/* מצב ייבוא / עריכה */}
             {mode === "edit" && (
               <div className="grid md:grid-cols-[1.2fr,1fr] gap-6">
                 {/* ייבוא אקסל / טקסט */}
@@ -360,10 +364,15 @@
                     ייבוא לתיקייה: {activeDeck?.name || ""}
                   </h2>
                   <p className="text-xs text-slate-300 leading-relaxed">
-                    קובץ אקסל / CSV עם גיליון ראשון בפורמט:
+                    מבנה קובץ (Excel / CSV):
                     <br />
-                    <span className="font-mono">A: English word</span> |{" "}
-                    <span className="font-mono">B: תרגום בעברית</span>
+                    <span className="font-mono">
+                      A: Sentence with ____ (המשפט עם רווח ריק)
+                    </span>
+                    <br />
+                    <span className="font-mono">B: English word</span>
+                    <br />
+                    <span className="font-mono">C: Translation (עברית)</span>
                   </p>
                   <input
                     type="file"
@@ -372,17 +381,18 @@
                     className="w-full text-xs text-slate-200 file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-sky-500 file:text-white hover:file:bg-sky-400"
                   />
                   <p className="text-xs text-slate-400">
-                    אפשר גם להדביק טקסט: כל שורה = מילה באנגלית + תרגום.
+                    אפשר גם להדביק ידנית: כל שורה בפורמט:
+                    <br />
+                    Sentence[TAB]Word[TAB]Translation
                   </p>
 
                   <pre className="text-[11px] bg-slate-900/80 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 whitespace-pre-wrap">
-brave	אמיץ
-bacteria	חיידק
-vehicle - רכב
+I bought a new ____ yesterday.	car	מכונית
+The firefighter was very ____ today.	brave	אמיץ
                   </pre>
                   <textarea
                     className="w-full h-32 rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm outline-none focus:border-sky-500"
-                    placeholder={`brave\tאמיץ\nbacteria\tחיידק`}
+                    placeholder={`I bought a new ____ yesterday.\tcar\tמכונית`}
                     value={manualText}
                     onChange={(e) => setManualText(e.target.value)}
                   />
@@ -391,52 +401,62 @@ vehicle - רכב
                     className="w-full inline-flex items-center justify-center rounded-xl bg-sky-500 hover:bg-sky-400 text-sm font-medium px-4 py-2 transition disabled:opacity-40"
                     disabled={!manualText.trim()}
                   >
-                    החלף / הוסף מילים לפי הטקסט
+                    החלף / הוסף משפטים לפי הטקסט
                   </button>
                 </section>
 
-                {/* תצוגת מילים + מחיקה */}
+                {/* רשימת משפטים בתיקייה */}
                 <section className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-medium">מילים בתיקייה</h2>
+                    <h2 className="text-lg font-medium">משפטים בתיקייה</h2>
                     <span className="text-xs text-slate-400">
-                      {cards.length} מילים
+                      {cards.length} משפטים
                     </span>
                   </div>
 
                   {cards.length === 0 ? (
                     <p className="text-sm text-slate-400">
-                      אין מילים עדיין בתיקייה הזו. טען אקסל או טקסט.
+                      אין משפטים עדיין בתיקייה הזו. טען קובץ או הדבק טקסט.
                     </p>
                   ) : (
                     <div className="space-y-2 max-h-72 overflow-y-auto pr-2">
                       {cards.map((card) => (
                         <div
                           key={card.id}
-                          className="flex items-center justify-between border border-slate-700 rounded-xl px-3 py-2 bg-slate-900/60 text-xs"
+                          className="flex flex-col gap-1 border border-slate-700 rounded-xl px-3 py-2 bg-slate-900/60 text-xs"
                         >
-                          <div>
-                            <div className="font-semibold text-sky-200">
-                              {card.word}
-                            </div>
-                            <div className="text-slate-300">
-                              {card.translation}
-                            </div>
+                          <div className="text-[11px] text-slate-400">
+                            משפט:
                           </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => speakWord(card.word)}
-                              className="text-[11px] px-2 py-1 rounded-lg border border-slate-600 hover:bg-slate-700"
-                              title="השמע באנגלית"
-                            >
-                              🔊
-                            </button>
-                            <button
-                              onClick={() => handleDeleteCard(card.id)}
-                              className="text-[11px] px-2 py-1 rounded-lg border border-red-500 text-red-300 hover:bg-red-500/20"
-                            >
-                              🗑
-                            </button>
+                          <div className="text-slate-200">
+                            {card.sentence}
+                          </div>
+                          <div className="flex items-center justify-between mt-1">
+                            <div>
+                              <span className="font-semibold text-sky-200">
+                                {card.word}
+                              </span>
+                              {card.translation && (
+                                <span className="ml-2 text-slate-300">
+                                  ({card.translation})
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => speakWord(card.word)}
+                                className="text-[11px] px-2 py-1 rounded-lg border border-slate-600 hover:bg-slate-700"
+                                title="השמע באנגלית"
+                              >
+                                🔊
+                              </button>
+                              <button
+                                onClick={() => handleDeleteCard(card.id)}
+                                className="text-[11px] px-2 py-1 rounded-lg border border-red-500 text-red-300 hover:bg-red-500/20"
+                              >
+                                🗑
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -446,12 +466,13 @@ vehicle - רכב
               </div>
             )}
 
+            {/* מצב תרגול */}
             {mode === "practice" && (
               <div className="mt-4 space-y-4">
                 {!currentCard ? (
                   <p className="text-sm text-slate-400">
-                    אין מילים לתרגול בתיקייה הזו. חזור ל"ייבוא / עריכה" וטעין
-                    מילים.
+                    אין משפטים לתרגול בתיקייה הזו. חזור ל"ייבוא / עריכה" וטעין
+                    משפטים.
                   </p>
                 ) : (
                   <>
@@ -465,10 +486,10 @@ vehicle - רכב
                     <div className="rounded-2xl border border-slate-700 bg-slate-900/60 p-4 space-y-4">
                       <div>
                         <p className="text-sm mb-1">
-                          בחר את המילה באנגלית המתאימה:
+                          השלם את המילה החסרה במשפט:
                         </p>
                         <p className="text-lg font-semibold text-sky-200">
-                          {currentCard.translation || currentCard.word}
+                          {currentCard.sentence}
                         </p>
                       </div>
 
@@ -507,11 +528,6 @@ vehicle - רכב
                                   🔊
                                 </button>
                               </div>
-                              {revealed && (
-                                <span className="block text-[11px] text-slate-300 mt-1">
-                                  {opt.translation || ""}
-                                </span>
-                              )}
                             </button>
                           );
                         })}
@@ -519,6 +535,14 @@ vehicle - רכב
 
                       {feedback && (
                         <p className="mt-2 text-sm">{feedback}</p>
+                      )}
+
+                      {revealed && currentCard.translation && (
+                        <p className="mt-1 text-sm text-slate-200">
+                          תרגום: <span className="font-semibold">
+                            {currentCard.translation}
+                          </span>
+                        </p>
                       )}
                     </div>
 

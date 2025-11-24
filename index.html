@@ -62,9 +62,25 @@
         .filter((c) => c.word);
     }
 
+    // השמעת מילה באנגלית
+    function speakWord(word) {
+      if (!("speechSynthesis" in window)) {
+        alert("הדפדפן שלך לא תומך בהשמעת קול (speechSynthesis).");
+        return;
+      }
+      const utter = new SpeechSynthesisUtterance(word);
+      utter.lang = "en-US";
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utter);
+    }
+
     function App() {
-      // cards: { id, word, translation }
-      const [cards, setCards] = useState([]);
+      // תיקיות: { id, name, cards: [{id, word, translation}] }
+      const [decks, setDecks] = useState(() => [
+        { id: "deck-1", name: "Default", cards: [] },
+      ]);
+      const [activeDeckId, setActiveDeckId] = useState("deck-1");
+
       const [manualText, setManualText] = useState("");
       const [mode, setMode] = useState("edit"); // "edit" | "practice"
       const [practiceIndex, setPracticeIndex] = useState(0);
@@ -73,6 +89,8 @@
       const [feedback, setFeedback] = useState("");
       const [revealed, setRevealed] = useState(false);
 
+      const activeDeck = decks.find((d) => d.id === activeDeckId) || decks[0];
+      const cards = activeDeck ? activeDeck.cards : [];
       const hasCards = cards.length > 0;
       const currentCard = hasCards ? cards[practiceIndex] : null;
 
@@ -103,6 +121,16 @@
         setRevealed(false);
       };
 
+      // עדכון תיקיה פעילה עם כרטיסים חדשים
+      const replaceCardsInActiveDeck = (newCards) => {
+        setDecks((prev) =>
+          prev.map((deck) =>
+            deck.id === activeDeckId ? { ...deck, cards: newCards } : deck
+          )
+        );
+        resetPractice();
+      };
+
       // ייבוא אקסל / CSV
       const handleFileUpload = (e) => {
         const file = e.target.files?.[0];
@@ -130,8 +158,7 @@
             .filter((c) => c.word);
 
           if (newCards.length) {
-            setCards(newCards);
-            resetPractice();
+            replaceCardsInActiveDeck(newCards);
           }
         };
 
@@ -142,8 +169,7 @@
       const handleUseManualText = () => {
         const parsed = parseManualText(manualText);
         if (parsed.length) {
-          setCards(parsed);
-          resetPractice();
+          replaceCardsInActiveDeck(parsed);
         }
       };
 
@@ -177,16 +203,64 @@
         }
       };
 
+      // מחיקת מילה בודדת מהתיקייה הפעילה
+      const handleDeleteCard = (cardId) => {
+        setDecks((prev) =>
+          prev.map((deck) =>
+            deck.id === activeDeckId
+              ? {
+                  ...deck,
+                  cards: deck.cards.filter((c) => c.id !== cardId),
+                }
+              : deck
+          )
+        );
+        resetPractice();
+      };
+
+      // יצירת תיקייה חדשה
+      const handleAddDeck = () => {
+        const name = prompt("שם תיקייה חדש (למשל: Amir A / Movies / Work):");
+        if (!name || !name.trim()) return;
+        const id = `deck-${Date.now()}`;
+        const newDeck = { id, name: name.trim(), cards: [] };
+        setDecks((prev) => [...prev, newDeck]);
+        setActiveDeckId(id);
+        resetPractice();
+      };
+
+      // מחיקת תיקייה
+      const handleDeleteDeck = (deckId) => {
+        if (decks.length === 1) {
+          alert("לא ניתן למחוק את התיקייה היחידה.");
+          return;
+        }
+        const deck = decks.find((d) => d.id === deckId);
+        const ok = confirm(
+          `למחוק את התיקייה "${deck?.name}" וכל המילים שבה?`
+        );
+        if (!ok) return;
+
+        setDecks((prev) => prev.filter((d) => d.id !== deckId));
+        if (activeDeckId === deckId) {
+          const remaining = decks.filter((d) => d.id !== deckId);
+          if (remaining.length > 0) {
+            setActiveDeckId(remaining[0].id);
+          }
+        }
+        resetPractice();
+      };
+
       return (
         <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-4">
-          <div className="w-full max-w-4xl bg-slate-800 rounded-2xl shadow-xl p-6 md:p-8">
+          <div className="w-full max-w-5xl bg-slate-800 rounded-2xl shadow-xl p-6 md:p-8">
             <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
               <div>
                 <h1 className="text-2xl md:text-3xl font-semibold mb-1">
                   Vocabulary Quiz Builder
                 </h1>
                 <p className="text-sm text-slate-300">
-                  ייבוא מילים + תרגום מאקסל, ובניית שאלון אמריקאי עם 4 תשובות.
+                  תיקיות מילים, ייבוא מאקסל/טקסט, שאלון אמריקאי עם אודיו באנגלית.
                 </p>
               </div>
 
@@ -199,7 +273,7 @@
                   }`}
                   onClick={() => setMode("edit")}
                 >
-                  1. ייבוא מילים
+                  1. ייבוא / עריכה
                 </button>
                 <button
                   className={`px-4 py-2 text-sm rounded-lg transition ${
@@ -215,13 +289,59 @@
               </div>
             </header>
 
+            {/* ניהול תיקיות */}
+            <section className="mb-4 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-xs text-slate-300">תיקיות:</span>
+                {decks.map((deck) => (
+                  <div
+                    key={deck.id}
+                    className={`inline-flex items-center rounded-full border px-3 py-1 text-xs cursor-pointer ${
+                      deck.id === activeDeckId
+                        ? "bg-sky-600 border-sky-400"
+                        : "bg-slate-700 border-slate-600 hover:bg-slate-600"
+                    }`}
+                    onClick={() => {
+                      setActiveDeckId(deck.id);
+                      resetPractice();
+                    }}
+                  >
+                    <span className="mr-1">{deck.name}</span>
+                    <span className="mx-1 text-[10px] text-slate-200">
+                      ({deck.cards.length})
+                    </span>
+                    {decks.length > 1 && (
+                      <button
+                        className="ml-2 text-[10px] text-slate-200 hover:text-red-300"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteDeck(deck.id);
+                        }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={handleAddDeck}
+                className="self-start md:self-auto inline-flex items-center rounded-full bg-emerald-500 hover:bg-emerald-400 text-xs font-medium px-3 py-1.5"
+              >
+                + תיקייה חדשה
+              </button>
+            </section>
+
             {mode === "edit" && (
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Excel import */}
+              <div className="grid md:grid-cols-[1.2fr,1fr] gap-6">
+                {/* ייבוא אקסל / טקסט */}
                 <section className="space-y-3">
-                  <h2 className="text-lg font-medium">ייבוא מאקסל / CSV</h2>
+                  <h2 className="text-lg font-medium">
+                    ייבוא לתיקייה: {activeDeck?.name || ""}
+                  </h2>
                   <p className="text-xs text-slate-300 leading-relaxed">
-                    קובץ אקסל עם גיליון ראשון בפורמט:
+                    קובץ אקסל / CSV עם גיליון ראשון בפורמט:
                     <br />
                     <span className="font-mono">A: English word</span> |{" "}
                     <span className="font-mono">B: תרגום בעברית</span>
@@ -233,46 +353,9 @@
                     className="w-full text-xs text-slate-200 file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-sky-500 file:text-white hover:file:bg-sky-400"
                   />
                   <p className="text-xs text-slate-400">
-                    אחרי בחירת הקובץ תיווצר אוטומטית רשימת הקלפים.
+                    אפשר גם להדביק טקסט: כל שורה = מילה באנגלית + תרגום.
                   </p>
 
-                  <div className="mt-4 text-xs text-slate-300 border border-slate-700 rounded-xl p-3 bg-slate-900/60">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-semibold">סטטוס מילים</span>
-                      <span className="text-sky-300">{cards.length} מילים</span>
-                    </div>
-                    {cards.length === 0 ? (
-                      <p>עדיין לא נטענו מילים.</p>
-                    ) : (
-                      <ul className="max-h-28 overflow-y-auto space-y-1 pr-1">
-                        {cards.slice(0, 6).map((c) => (
-                          <li
-                            key={c.id}
-                            className="flex justify-between text-[11px]"
-                          >
-                            <span>{c.word}</span>
-                            <span className="text-slate-400">
-                              {c.translation}
-                            </span>
-                          </li>
-                        ))}
-                        {cards.length > 6 && (
-                          <li className="text-[11px] text-slate-500">
-                            ...
-                            ועוד {cards.length - 6} מילים
-                          </li>
-                        )}
-                      </ul>
-                    )}
-                  </div>
-                </section>
-
-                {/* Manual text input */}
-                <section className="space-y-3">
-                  <h2 className="text-lg font-medium">ייבוא ידני (טקסט)</h2>
-                  <p className="text-xs text-slate-300">
-                    כל שורה: מילה באנגלית + תרגום, למשל:
-                  </p>
                   <pre className="text-[11px] bg-slate-900/80 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 whitespace-pre-wrap">
 brave	אמיץ
 bacteria	חיידק
@@ -289,8 +372,57 @@ vehicle - רכב
                     className="w-full inline-flex items-center justify-center rounded-xl bg-sky-500 hover:bg-sky-400 text-sm font-medium px-4 py-2 transition disabled:opacity-40"
                     disabled={!manualText.trim()}
                   >
-                    החלף רשימת מילים לפי הטקסט
+                    החלף / הוסף מילים לפי הטקסט
                   </button>
+                </section>
+
+                {/* תצוגת מילים + מחיקה */}
+                <section className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-medium">מילים בתיקייה</h2>
+                    <span className="text-xs text-slate-400">
+                      {cards.length} מילים
+                    </span>
+                  </div>
+
+                  {cards.length === 0 ? (
+                    <p className="text-sm text-slate-400">
+                      אין מילים עדיין בתיקייה הזו. טען אקסל או טקסט.
+                    </p>
+                  ) : (
+                    <div className="space-y-2 max-h-72 overflow-y-auto pr-2">
+                      {cards.map((card) => (
+                        <div
+                          key={card.id}
+                          className="flex items-center justify-between border border-slate-700 rounded-xl px-3 py-2 bg-slate-900/60 text-xs"
+                        >
+                          <div>
+                            <div className="font-semibold text-sky-200">
+                              {card.word}
+                            </div>
+                            <div className="text-slate-300">
+                              {card.translation}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => speakWord(card.word)}
+                              className="text-[11px] px-2 py-1 rounded-lg border border-slate-600 hover:bg-slate-700"
+                              title="השמע באנגלית"
+                            >
+                              🔊
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCard(card.id)}
+                              className="text-[11px] px-2 py-1 rounded-lg border border-red-500 text-red-300 hover:bg-red-500/20"
+                            >
+                              🗑
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </section>
               </div>
             )}
@@ -299,14 +431,15 @@ vehicle - רכב
               <div className="mt-4 space-y-4">
                 {!currentCard ? (
                   <p className="text-sm text-slate-400">
-                    אין מילים לתרגול. חזור ל"ייבוא מילים" וטעין מילים מאקסל או
-                    טקסט.
+                    אין מילים לתרגול בתיקייה הזו. חזור ל"ייבוא / עריכה" וטעין
+                    מילים.
                   </p>
                 ) : (
                   <>
                     <div className="flex items-center justify-between text-xs text-slate-400">
                       <span>
-                        שאלה {practiceIndex + 1} מתוך {cards.length}
+                        תיקייה: {activeDeck?.name || ""} · שאלה{" "}
+                        {practiceIndex + 1} מתוך {cards.length}
                       </span>
                     </div>
 
@@ -339,7 +472,22 @@ vehicle - רכב
                                 revealed && isCorrect ? "border-emerald-400" : ""
                               }`}
                             >
-                              <span className="font-medium">{opt.word}</span>
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="font-medium">
+                                  {opt.word}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    speakWord(opt.word);
+                                  }}
+                                  className="text-[11px] px-2 py-1 rounded-lg border border-slate-600 hover:bg-slate-700"
+                                  title="השמע באנגלית"
+                                >
+                                  🔊
+                                </button>
+                              </div>
                               {revealed && (
                                 <span className="block text-[11px] text-slate-300 mt-1">
                                   {opt.translation || ""}
@@ -375,7 +523,7 @@ vehicle - רכב
                         onClick={() => setMode("edit")}
                         className="text-xs text-sky-300 hover:underline"
                       >
-                        חזרה לייבוא מילים
+                        חזרה לייבוא / עריכה
                       </button>
                     </div>
                   </>

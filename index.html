@@ -24,6 +24,9 @@
   <script type="text/babel">
     const { useState, useEffect } = React;
 
+    // 🔗 כאן נכניס את כתובת השרת אחרי שנקים אותו
+    const API_BASE = "https://YOUR-BACKEND-URL.com";
+
     // לוודא שהקולות נטענים (כרום/מק)
     if ("speechSynthesis" in window) {
       window.speechSynthesis.onvoiceschanged = () => {};
@@ -87,13 +90,26 @@
     }
 
     function App() {
-      // כרטיס: { id, sentence, word, translation }
-      // תיקיות: { id, name, cards: [...] }
-      const [decks, setDecks] = useState(() => [
-        { id: "deck-1", name: "Default", cards: [] },
-      ]);
-      const [activeDeckId, setActiveDeckId] = useState("deck-1");
+      // 🔹 State: תיקיות + סנכרון
+      const [decks, setDecks] = useState(() => {
+        // נסיון לטעון מ-localStorage (שימושי גם בלי ענן)
+        if (typeof window !== "undefined") {
+          try {
+            const saved = window.localStorage.getItem("vq_decks_v1");
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              if (Array.isArray(parsed) && parsed.length) {
+                return parsed;
+              }
+            }
+          } catch (e) {
+            console.warn("Failed to load decks from storage", e);
+          }
+        }
+        return [{ id: "deck-1", name: "Default", cards: [] }];
+      });
 
+      const [activeDeckId, setActiveDeckId] = useState("deck-1");
       const [manualText, setManualText] = useState("");
       const [mode, setMode] = useState("edit"); // "edit" | "practice"
       const [practiceIndex, setPracticeIndex] = useState(0);
@@ -102,11 +118,24 @@
       const [feedback, setFeedback] = useState("");
       const [revealed, setRevealed] = useState(false);
 
+      // 🔹 סנכרון ענן
+      const [syncId, setSyncId] = useState("");
+      const [cloudStatus, setCloudStatus] = useState("");
+
       const activeDeck =
         decks.find((d) => d.id === activeDeckId) || decks[0];
       const cards = activeDeck ? activeDeck.cards : [];
       const hasCards = cards.length > 0;
       const currentCard = hasCards ? cards[practiceIndex] : null;
+
+      // שמירת התיקיות ב-localStorage
+      useEffect(() => {
+        try {
+          window.localStorage.setItem("vq_decks_v1", JSON.stringify(decks));
+        } catch (e) {
+          console.warn("Failed to save decks to storage", e);
+        }
+      }, [decks]);
 
       // כל פעם שמתחלפת שאלה / רשימת מילים – בונים אופציות
       useEffect(() => {
@@ -145,7 +174,7 @@
         resetPractice();
       };
 
-      // ייבוא מאקסל / CSV לפי המבנה החדש:
+      // ייבוא מאקסל / CSV לפי המבנה:
       // Col A: sentence with ____  |  Col B: word  |  Col C: translation
       const handleFileUpload = (e) => {
         const file = e.target.files?.[0];
@@ -271,11 +300,84 @@
         resetPractice();
       };
 
+      // 🔗 שמירה לענן
+      const handleCloudSave = async () => {
+        if (!syncId.trim()) {
+          alert("קודם תכתוב Sync ID (למשל: השם שלך באנגלית).");
+          return;
+        }
+        if (!API_BASE || API_BASE.includes("YOUR-BACKEND-URL")) {
+          alert("לא הוגדר API_BASE. צריך לעדכן את כתובת השרת בקוד.");
+          return;
+        }
+
+        try {
+          setCloudStatus("שומר לענן...");
+          const res = await fetch(
+            `${API_BASE}/decks/${encodeURIComponent(syncId.trim())}`,
+            {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ decks }),
+            }
+          );
+          if (!res.ok) {
+            throw new Error("Bad response");
+          }
+          setCloudStatus("נשמר בענן ✅");
+        } catch (e) {
+          console.error(e);
+          setCloudStatus("שגיאה בשמירה לענן ❌");
+        }
+      };
+
+      // 🔗 טעינה מהענן
+      const handleCloudLoad = async () => {
+        if (!syncId.trim()) {
+          alert("קודם תכתוב Sync ID (למשל: השם שלך באנגלית).");
+          return;
+        }
+        if (!API_BASE || API_BASE.includes("YOUR-BACKEND-URL")) {
+          alert("לא הוגדר API_BASE. צריך לעדכן את כתובת השרת בקוד.");
+          return;
+        }
+
+        try {
+          setCloudStatus("טוען מהענן...");
+          const res = await fetch(
+            `${API_BASE}/decks/${encodeURIComponent(syncId.trim())}`
+          );
+          if (res.status === 404) {
+            setCloudStatus("לא נמצא מידע לסנכרון הזה.");
+            return;
+          }
+          if (!res.ok) {
+            throw new Error("Bad response");
+          }
+          const data = await res.json();
+          if (!data.decks || !Array.isArray(data.decks)) {
+            throw new Error("Invalid data");
+          }
+          setDecks(data.decks);
+          if (data.decks.length > 0) {
+            setActiveDeckId(data.decks[0].id || "deck-1");
+          }
+          setPracticeIndex(0);
+          setSelectedOptionId(null);
+          setFeedback("");
+          setRevealed(false);
+          setCloudStatus("נטען מהענן ✅");
+        } catch (e) {
+          console.error(e);
+          setCloudStatus("שגיאה בטעינה מהענן ❌");
+        }
+      };
+
       return (
         <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-4">
           <div className="w-full max-w-5xl bg-slate-800 rounded-2xl shadow-xl p-6 md:p-8">
             {/* כותרת */}
-            <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
               <div>
                 <h1 className="text-2xl md:text-3xl font-semibold mb-1">
                   Vocabulary Sentence Quiz
@@ -311,48 +413,85 @@
               </div>
             </header>
 
-            {/* ניהול תיקיות */}
-            <section className="mb-4 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
-              <div className="flex flex-wrap gap-2 items-center">
-                <span className="text-xs text-slate-300">תיקיות:</span>
-                {decks.map((deck) => (
-                  <div
-                    key={deck.id}
-                    className={`inline-flex items-center rounded-full border px-3 py-1 text-xs cursor-pointer ${
-                      deck.id === activeDeckId
-                        ? "bg-sky-600 border-sky-400"
-                        : "bg-slate-700 border-slate-600 hover:bg-slate-600"
-                    }`}
-                    onClick={() => {
-                      setActiveDeckId(deck.id);
-                      resetPractice();
-                    }}
-                  >
-                    <span className="mr-1">{deck.name}</span>
-                    <span className="mx-1 text-[10px] text-slate-200">
-                      ({deck.cards.length})
-                    </span>
-                    {decks.length > 1 && (
-                      <button
-                        className="ml-2 text-[10px] text-slate-200 hover:text-red-300"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteDeck(deck.id);
-                        }}
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                ))}
+            {/* שורת סנכרון ענן */}
+            <section className="mb-4 rounded-xl bg-slate-900/70 border border-slate-700 p-3 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+              <div className="flex-1 flex flex-col gap-1">
+                <label className="text-xs text-slate-300">
+                  Sync ID (אותו מזהה בכל מכשיר כדי לסנכרן ענן):
+                </label>
+                <input
+                  type="text"
+                  value={syncId}
+                  onChange={(e) => setSyncId(e.target.value)}
+                  placeholder="למשל: shlomi-english"
+                  className="rounded-lg bg-slate-800 border border-slate-600 px-3 py-1.5 text-sm outline-none focus:border-sky-500"
+                />
+                {cloudStatus && (
+                  <span className="text-[11px] text-slate-400 mt-1">
+                    {cloudStatus}
+                  </span>
+                )}
               </div>
+              <div className="flex gap-2 md:flex-col">
+                <button
+                  onClick={handleCloudSave}
+                  className="flex-1 md:flex-none rounded-lg border border-sky-500 text-xs px-3 py-1.5 hover:bg-sky-500/10"
+                >
+                  ☁️ שמור לענן
+                </button>
+                <button
+                  onClick={handleCloudLoad}
+                  className="flex-1 md:flex-none rounded-lg border border-emerald-500 text-xs px-3 py-1.5 hover:bg-emerald-500/10"
+                >
+                  ☁️ טען מהענן
+                </button>
+              </div>
+            </section>
 
-              <button
-                onClick={handleAddDeck}
-                className="self-start md:self-auto inline-flex items-center rounded-full bg-emerald-500 hover:bg-emerald-400 text-xs font-medium px-3 py-1.5"
-              >
-                + תיקייה חדשה
-              </button>
+            {/* ניהול תיקיות */}
+            <section className="mb-4 flex flex-col gap-3">
+              <div className="flex flex-wrap gap-2 items-center justify-between">
+                <div className="flex flex-wrap gap-2 items-center">
+                  <span className="text-xs text-slate-300">תיקיות:</span>
+                  {decks.map((deck) => (
+                    <div
+                      key={deck.id}
+                      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs cursor-pointer ${
+                        deck.id === activeDeckId
+                          ? "bg-sky-600 border-sky-400"
+                          : "bg-slate-700 border-slate-600 hover:bg-slate-600"
+                      }`}
+                      onClick={() => {
+                        setActiveDeckId(deck.id);
+                        resetPractice();
+                      }}
+                    >
+                      <span className="mr-1">{deck.name}</span>
+                      <span className="mx-1 text-[10px] text-slate-200">
+                        ({deck.cards.length})
+                      </span>
+                      {decks.length > 1 && (
+                        <button
+                          className="ml-2 text-[10px] text-slate-200 hover:text-red-300"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteDeck(deck.id);
+                          }}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={handleAddDeck}
+                  className="inline-flex items-center rounded-full bg-emerald-500 hover:bg-emerald-400 text-xs font-medium px-3 py-1.5"
+                >
+                  + תיקייה חדשה
+                </button>
+              </div>
             </section>
 
             {/* מצב ייבוא / עריכה */}
@@ -539,7 +678,8 @@ The firefighter was very ____ today.	brave	אמיץ
 
                       {revealed && currentCard.translation && (
                         <p className="mt-1 text-sm text-slate-200">
-                          תרגום: <span className="font-semibold">
+                          תרגום:{" "}
+                          <span className="font-semibold">
                             {currentCard.translation}
                           </span>
                         </p>

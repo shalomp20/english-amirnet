@@ -65,21 +65,21 @@
 
   speechSynthesis.onvoiceschanged = () => {};
   function speakWord(word) {
-  const utter = new SpeechSynthesisUtterance(word);
-  const voices = speechSynthesis.getVoices();
-  const voice = voices.find(v =>
-    v.name.toLowerCase().includes("samantha") ||   // מק
-    v.name.toLowerCase().includes("google us")     // כרום
-  );
+    const utter = new SpeechSynthesisUtterance(word);
+    const voices = speechSynthesis.getVoices();
+    const voice = voices.find(v =>
+     v.name.toLowerCase().includes("samantha") ||   // מק
+     v.name.toLowerCase().includes("google us")     // כרום
+    );
 
-  if (voice) {
+    if (voice) {
     utter.voice = voice;
-  }
+    }
 
-  utter.lang = "en-US";
+    utter.lang = "en-US";
 
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(utter);
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utter);
 }
 
 

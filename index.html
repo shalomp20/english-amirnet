@@ -10,7 +10,7 @@
     rel="stylesheet"
   />
 </head>
-<body class="bg-slate-900 text-slate-100">
+<body class="bg-slate-950 text-slate-50">
   <div id="root"></div>
 
   <!-- React + ReactDOM + Babel -->
@@ -24,15 +24,12 @@
   <script type="text/babel">
     const { useState, useEffect } = React;
 
-    // 🔗 כתובת השרת שלך
     const API_BASE = "https://vocab-backend-lbum.onrender.com";
 
-    // לוודא שהקולות נטענים (כרום/מק)
     if ("speechSynthesis" in window) {
       window.speechSynthesis.onvoiceschanged = () => {};
     }
 
-    // ערבוב אקראי של מערך
     function shuffleArray(array) {
       const arr = [...array];
       for (let i = arr.length - 1; i > 0; i--) {
@@ -42,8 +39,6 @@
       return arr;
     }
 
-    // פירסינג של טקסט ידני:
-    // sentence \t word \t translation
     function parseManualText(raw) {
       return raw
         .split(/\n/)
@@ -65,7 +60,6 @@
         .filter((c) => c.sentence && c.word);
     }
 
-    // השמעת מילה באנגלית (עמודה שנייה – המילה באנגלית)
     function speakWord(word) {
       if (!("speechSynthesis" in window)) {
         alert("הדפדפן שלך לא תומך בהקראת טקסט.");
@@ -78,7 +72,6 @@
       const utter = new SpeechSynthesisUtterance(text);
 
       let voices = window.speechSynthesis.getVoices() || [];
-      // ניסיון לבחור קול אנגלי נעים אם קיים
       const preferred =
         voices.find((v) =>
           v.name.toLowerCase().includes("samantha")
@@ -100,7 +93,6 @@
     }
 
     function App() {
-      // 🔹 State: תיקיות + סנכרון
       const [decks, setDecks] = useState(() => {
         if (typeof window !== "undefined") {
           try {
@@ -122,12 +114,11 @@
       const [manualText, setManualText] = useState("");
       const [mode, setMode] = useState("edit"); // "edit" | "practice"
       const [practiceIndex, setPracticeIndex] = useState(0);
-      const [options, setOptions] = useState([]); // 4 כרטיסים כאופציות
+      const [options, setOptions] = useState([]);
       const [selectedOptionId, setSelectedOptionId] = useState(null);
       const [feedback, setFeedback] = useState("");
       const [revealed, setRevealed] = useState(false);
 
-      // 🔹 סנכרון ענן
       const [syncId, setSyncId] = useState("");
       const [cloudStatus, setCloudStatus] = useState("");
 
@@ -137,7 +128,6 @@
       const hasCards = cards.length > 0;
       const currentCard = hasCards ? cards[practiceIndex] : null;
 
-      // שמירת התיקיות ב-localStorage
       useEffect(() => {
         try {
           window.localStorage.setItem("vq_decks_v1", JSON.stringify(decks));
@@ -146,7 +136,6 @@
         }
       }, [decks]);
 
-      // כל פעם שמתחלפת שאלה / רשימת מילים – בונים אופציות
       useEffect(() => {
         if (!hasCards || !currentCard) {
           setOptions([]);
@@ -173,7 +162,6 @@
         setRevealed(false);
       };
 
-      // עדכון תיקייה פעילה עם כרטיסים חדשים
       const replaceCardsInActiveDeck = (newCards) => {
         setDecks((prev) =>
           prev.map((deck) =>
@@ -183,8 +171,6 @@
         resetPractice();
       };
 
-      // ייבוא מאקסל / CSV:
-      // Col A: sentence with ____  |  Col B: word (English)  |  Col C: translation
       const handleFileUpload = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -201,7 +187,7 @@
             .filter((row) => row && row[0] && row[1])
             .map((row, index) => {
               const sentence = String(row[0]).trim();
-              const word = String(row[1]).trim();          // ⇐ עמודה שנייה – תשובה באנגלית
+              const word = String(row[1]).trim();
               const translation = row[2] ? String(row[2]).trim() : "";
 
               return {
@@ -221,7 +207,6 @@
         reader.readAsArrayBuffer(file);
       };
 
-      // ייבוא טקסט ידני (משפט \t מילה \t תרגום)
       const handleUseManualText = () => {
         const parsed = parseManualText(manualText);
         if (parsed.length) {
@@ -261,7 +246,6 @@
         }
       };
 
-      // מחיקת מילה בודדת מהתיקייה הפעילה
       const handleDeleteCard = (cardId) => {
         setDecks((prev) =>
           prev.map((deck) =>
@@ -276,7 +260,6 @@
         resetPractice();
       };
 
-      // יצירת תיקייה חדשה
       const handleAddDeck = () => {
         const name = prompt("שם תיקייה חדש (למשל: Amir A / Movies / Work):");
         if (!name || !name.trim()) return;
@@ -287,7 +270,6 @@
         resetPractice();
       };
 
-      // מחיקת תיקייה
       const handleDeleteDeck = (deckId) => {
         if (decks.length === 1) {
           alert("לא ניתן למחוק את התיקייה היחידה.");
@@ -301,7 +283,7 @@
 
         setDecks((prev) => prev.filter((d) => d.id !== deckId));
         if (activeDeckId === deckId) {
-          const remaining = decks.filter((d) => d !== deckId);
+          const remaining = decks.filter((d) => d.id !== deckId);
           if (remaining.length > 0) {
             setActiveDeckId(remaining[0].id);
           }
@@ -309,7 +291,6 @@
         resetPractice();
       };
 
-      // 🔗 שמירה לענן
       const handleCloudSave = async () => {
         if (!syncId.trim()) {
           alert("קודם תכתוב Sync ID (למשל: השם שלך באנגלית).");
@@ -340,7 +321,6 @@
         }
       };
 
-      // 🔗 טעינה מהענן
       const handleCloudLoad = async () => {
         if (!syncId.trim()) {
           alert("קודם תכתוב Sync ID (למשל: השם שלך באנגלית).");
@@ -382,365 +362,424 @@
         }
       };
 
-      // קלאס דינמי ל-toast של הפידבק
       const feedbackClass = feedback
         ? feedback.includes("נכון") || feedback.includes("Correct")
           ? "bg-emerald-500/10 border border-emerald-500/60 text-emerald-200"
           : "bg-rose-500/10 border border-rose-500/60 text-rose-200"
         : "";
 
+      // כותרת למעלה לפי מצב
+      const currentPageTitle =
+        mode === "edit" ? "ייבוא ועריכת משפטים" : "תרגול – Quiz Mode";
+
       return (
-        <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-4">
-          <div className="w-full max-w-5xl bg-slate-800 rounded-2xl shadow-xl p-6 md:p-8">
-            {/* כותרת */}
-            <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-              <div>
-                <h1 className="text-3xl md:text-4xl font-semibold mb-1 text-center md:text-left">
-                  Vocabulary Sentence Quiz
-                </h1>
-                <p className="text-sm text-slate-300 text-center md:text-left">
-                  מייבא משפט עם רווח ריק, מילה באנגלית ותרגום. השאלה היא המשפט,
-                  התשובות הן המילים, והתרגום מופיע אחרי הבחירה.
-                </p>
-              </div>
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-3 md:p-6">
+          <div className="w-full max-w-6xl rounded-3xl bg-slate-900/90 border border-slate-800 shadow-2xl backdrop-blur-md overflow-hidden">
+            <div className="grid md:grid-cols-[240px,1fr] min-h-[520px]">
+              {/* SIDEBAR – App style */}
+              <aside className="bg-slate-950/80 border-r border-slate-800 p-4 md:p-5 flex flex-col gap-6">
+                {/* Logo / Title */}
+                <div>
+                  <div className="inline-flex items-center gap-2 rounded-full bg-sky-500/10 px-3 py-1 text-xs text-sky-300 border border-sky-500/30">
+                    <span>📚</span>
+                    <span>Personal English Lab</span>
+                  </div>
+                  <h1 className="mt-3 text-xl font-semibold leading-tight">
+                    Vocab Sentence Quiz
+                  </h1>
+                  <p className="mt-1 text-xs text-slate-400">
+                    יבוא, תרגול וסנכרון דקים בין מכשירים.
+                  </p>
+                </div>
 
-              <div className="inline-flex self-center md:self-auto rounded-xl bg-slate-700 p-1">
-                <button
-                  className={`px-4 py-2 text-sm rounded-lg transition ${
-                    mode === "edit"
-                      ? "bg-slate-900 text-white"
-                      : "text-slate-200 hover:bg-slate-600"
-                  }`}
-                  onClick={() => setMode("edit")}
-                >
-                  1. ייבוא / עריכה
-                </button>
-                <button
-                  className={`px-4 py-2 text-sm rounded-lg transition ${
-                    mode === "practice"
-                      ? "bg-slate-900 text-white"
-                      : "text-slate-200 hover:bg-slate-600"
-                  }`}
-                  onClick={() => setMode("practice")}
-                  disabled={!hasCards}
-                >
-                  2. תרגול
-                </button>
-              </div>
-            </header>
+                {/* Navigation */}
+                <nav className="space-y-2">
+                  <div className="text-[11px] uppercase tracking-wide text-slate-500 mb-1">
+                    Pages
+                  </div>
+                  <button
+                    onClick={() => setMode("edit")}
+                    className={`w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm transition ${
+                      mode === "edit"
+                        ? "bg-sky-600 text-white shadow"
+                        : "bg-slate-900/60 text-slate-200 hover:bg-slate-800"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      📥 <span>Import & Edit</span>
+                    </span>
+                    <span className="text-[10px]">CTRL+1</span>
+                  </button>
+                  <button
+                    onClick={() => setMode("practice")}
+                    disabled={!hasCards}
+                    className={`w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm transition ${
+                      mode === "practice"
+                        ? "bg-emerald-600 text-white shadow"
+                        : "bg-slate-900/60 text-slate-200 hover:bg-slate-800"
+                    } ${!hasCards ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    <span className="flex items-center gap-2">
+                      🎮 <span>Practice</span>
+                    </span>
+                    <span className="text-[10px]">CTRL+2</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      // סתם גלילה למטה לסנכרון, שלא ישנה לוגיקה
+                      const el = document.getElementById("cloud-sync");
+                      if (el) el.scrollIntoView({ behavior: "smooth" });
+                    }}
+                    className="w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm bg-slate-900/60 text-slate-200 hover:bg-slate-800 transition"
+                  >
+                    <span className="flex items-center gap-2">
+                      ☁️ <span>Cloud Sync</span>
+                    </span>
+                    <span className="text-[10px]">Sync</span>
+                  </button>
+                </nav>
 
-            {/* שורת סנכרון ענן */}
-            <section className="mb-4 rounded-xl bg-slate-900/70 border border-slate-700 p-3 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
-              <div className="flex-1 flex flex-col gap-1">
-                <label className="text-xs text-slate-300">
-                  Sync ID (אותו מזהה בכל מכשיר כדי לסנכרן ענן):
-                </label>
-                <input
-                  type="text"
-                  value={syncId}
-                  onChange={(e) => setSyncId(e.target.value)}
-                  placeholder="למשל: shlomi-english"
-                  className="rounded-lg bg-slate-800 border border-slate-600 px-3 py-1.5 text-sm outline-none focus:border-sky-500"
-                />
-                {cloudStatus && (
-                  <span className="text-[11px] text-slate-400 mt-1">
-                    {cloudStatus}
-                  </span>
-                )}
-              </div>
-              <div className="flex gap-2 md:flex-col">
-                <button
-                  onClick={handleCloudSave}
-                  className="flex-1 md:flex-none rounded-lg border border-sky-500 text-xs px-3 py-1.5 hover:bg-sky-500/10"
-                >
-                  ☁️ שמור לענן
-                </button>
-                <button
-                  onClick={handleCloudLoad}
-                  className="flex-1 md:flex-none rounded-lg border border-emerald-500 text-xs px-3 py-1.5 hover:bg-emerald-500/10"
-                >
-                  ☁️ טען מהענן
-                </button>
-              </div>
-            </section>
-
-            {/* ניהול תיקיות */}
-            {mode === "edit" && (
-              <section className="mb-4 flex flex-col gap-3">
-                <div className="flex flex-wrap gap-2 items-center justify-between">
-                  <div className="flex flex-wrap gap-2 items-center">
-                    <span className="text-xs text-slate-300">תיקיות:</span>
+                {/* Decks */}
+                <div className="mt-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] uppercase tracking-wide text-slate-500">
+                      Decks
+                    </span>
+                    <button
+                      onClick={handleAddDeck}
+                      className="text-[11px] text-emerald-300 hover:text-emerald-200"
+                    >
+                      + New
+                    </button>
+                  </div>
+                  <div className="space-y-1 max-h-40 overflow-auto pr-1">
                     {decks.map((deck) => (
-                      <div
+                      <button
                         key={deck.id}
-                        className={`inline-flex items-center rounded-full border px-3 py-1 text-xs cursor-pointer ${
-                          deck.id === activeDeckId
-                            ? "bg-sky-600 border-sky-400"
-                            : "bg-slate-700 border-slate-600 hover:bg-slate-600"
-                        }`}
                         onClick={() => {
                           setActiveDeckId(deck.id);
                           resetPractice();
                         }}
+                        className={`w-full flex items-center justify-between rounded-lg px-3 py-1.5 text-xs text-left transition ${
+                          deck.id === activeDeckId
+                            ? "bg-sky-600/80 text-white"
+                            : "bg-slate-900/70 text-slate-200 hover:bg-slate-800"
+                        }`}
                       >
-                        <span className="mr-1">{deck.name}</span>
-                        <span className="mx-1 text-[10px] text-slate-200">
-                          ({deck.cards.length})
+                        <span className="truncate">{deck.name}</span>
+                        <span className="text-[10px] opacity-80">
+                          {deck.cards.length} cards
                         </span>
-                        {decks.length > 1 && (
-                          <button
-                            className="ml-2 text-[10px] text-slate-200 hover:text-red-300"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteDeck(deck.id);
-                            }}
-                          >
-                            ✕
-                          </button>
-                        )}
-                      </div>
+                      </button>
                     ))}
+                    {decks.length === 0 && (
+                      <p className="text-xs text-slate-500">
+                        אין עדיין דקים, צור אחד חדש.
+                      </p>
+                    )}
                   </div>
-
-                  <button
-                    onClick={handleAddDeck}
-                    className="inline-flex items-center rounded-full bg-emerald-500 hover:bg-emerald-400 text-xs font-medium px-3 py-1.5"
-                  >
-                    + תיקייה חדשה
-                  </button>
                 </div>
-              </section>
-            )}
 
-            {/* מצב ייבוא / עריכה */}
-            {mode === "edit" && (
-              <div className="grid md:grid-cols-[1.2fr,1fr] gap-6">
-                {/* ייבוא אקסל / טקסט */}
-                <section className="space-y-3">
-                  <h2 className="text-lg font-medium">
-                    ייבוא לתיקייה: {activeDeck?.name || ""}
-                  </h2>
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    מבנה קובץ (Excel / CSV):
-                    <br />
-                    <span className="font-mono">
-                      A: Sentence with ____ (המשפט עם רווח ריק)
-                    </span>
-                    <br />
-                    <span className="font-mono">B: English word</span>
-                    <br />
-                    <span className="font-mono">C: Translation (עברית)</span>
-                  </p>
-                  <input
-                    type="file"
-                    accept=".xlsx,.xls,.csv"
-                    onChange={handleFileUpload}
-                    className="w-full text-xs text-slate-200 file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-sky-500 file:text-white hover:file:bg-sky-400"
-                  />
-                  <p className="text-xs text-slate-400">
-                    אפשר גם להדביק ידנית: כל שורה בפורמט:
-                    <br />
-                    Sentence[TAB]Word[TAB]Translation
-                  </p>
-
-                  <pre className="text-[11px] bg-slate-900/80 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 whitespace-pre-wrap">
-I bought a new ____ yesterday.	car	מכונית
-The firefighter was very ____ today.	brave	אמיץ
-                  </pre>
-                  <textarea
-                    className="w-full h-32 rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm outline-none focus:border-sky-500"
-                    placeholder={`I bought a new ____ yesterday.\tcar\tמכונית`}
-                    value={manualText}
-                    onChange={(e) => setManualText(e.target.value)}
-                  />
-                  <button
-                    onClick={handleUseManualText}
-                    className="w-full inline-flex items-center justify-center rounded-xl bg-sky-500 hover:bg-sky-400 text-sm font-medium px-4 py-2 transition disabled:opacity-40"
-                    disabled={!manualText.trim()}
-                  >
-                    החלף / הוסף משפטים לפי הטקסט
-                  </button>
-                </section>
-
-                {/* רשימת משפטים בתיקייה */}
-                <section className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-medium">משפטים בתיקייה</h2>
-                    <span className="text-xs text-slate-400">
-                      {cards.length} משפטים
+                {/* Cloud sync (sidebar mini) */}
+                <div
+                  id="cloud-sync"
+                  className="mt-auto rounded-2xl bg-slate-900/80 border border-slate-800 px-3 py-3 space-y-2"
+                >
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="flex items-center gap-1">
+                      ☁️ <span>Cloud Sync</span>
                     </span>
                   </div>
-
-                  {cards.length === 0 ? (
-                    <p className="text-sm text-slate-400">
-                      אין משפטים עדיין בתיקייה הזו. טען קובץ או הדבק טקסט.
-                    </p>
-                  ) : (
-                    <div className="space-y-2 max-h-72 overflow-y-auto pr-2">
-                      {cards.map((card) => (
-                        <div
-                          key={card.id}
-                          className="flex flex-col gap-1 border border-slate-700 rounded-xl px-3 py-2 bg-slate-900/60 text-xs"
-                        >
-                          <div className="text-[11px] text-slate-400">
-                            משפט:
-                          </div>
-                          <div className="text-slate-200">
-                            {card.sentence}
-                          </div>
-                          <div className="flex items-center justify-between mt-1">
-                            <div>
-                              <span className="font-semibold text-sky-200">
-                                {card.word}
-                              </span>
-                              {card.translation && (
-                                <span className="ml-2 text-slate-300">
-                                  ({card.translation})
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => speakWord(card.word)}
-                                className="text-[11px] px-2 py-1 rounded-lg border border-slate-600 hover:bg-slate-700"
-                                title="השמע באנגלית"
-                              >
-                                🔊
-                              </button>
-                              <button
-                                onClick={() => handleDeleteCard(card.id)}
-                                className="text-[11px] px-2 py-1 rounded-lg border border-red-500 text-red-300 hover:bg-red-500/20"
-                              >
-                                🗑
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                  <input
+                    type="text"
+                    value={syncId}
+                    onChange={(e) => setSyncId(e.target.value)}
+                    placeholder="Sync ID (למשל: shlomi-english)"
+                    className="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-2 py-1.5 text-[11px] outline-none focus:border-sky-500"
+                  />
+                  <div className="flex gap-1 mt-1">
+                    <button
+                      onClick={handleCloudSave}
+                      className="flex-1 rounded-lg bg-sky-600 hover:bg-sky-500 text-[11px] py-1"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={handleCloudLoad}
+                      className="flex-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-[11px] py-1"
+                    >
+                      Load
+                    </button>
+                  </div>
+                  {cloudStatus && (
+                    <div className="mt-1 text-[10px] text-slate-400">
+                      {cloudStatus}
                     </div>
                   )}
-                </section>
-              </div>
-            )}
+                </div>
+              </aside>
 
-            {/* מצב תרגול – Game Card במרכז */}
-            {mode === "practice" && (
-              <div className="mt-6 flex items-center justify-center">
-                {!currentCard ? (
-                  <p className="text-sm text-slate-400">
-                    אין משפטים לתרגול בתיקייה הזו. חזור ל"ייבוא / עריכה" וטעין
-                    משפטים.
-                  </p>
-                ) : (
-                  <div className="w-full max-w-2xl space-y-4">
-                    <div className="rounded-3xl border border-slate-700 bg-slate-900/80 shadow-2xl p-6 md:p-8 space-y-6">
-                      <div className="flex items-center justify-between text-xs text-slate-400">
-                        <span>
-                          תיקייה: {activeDeck?.name || ""} · שאלה{" "}
-                          {practiceIndex + 1} מתוך {cards.length}
+              {/* MAIN AREA */}
+              <main className="p-4 md:p-6 flex flex-col gap-4">
+                {/* Top bar inside main */}
+                <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                  <div>
+                    <p className="text-[11px] text-slate-400">
+                      Active deck:{" "}
+                      <span className="text-slate-100 font-medium">
+                        {activeDeck?.name || ""}
+                      </span>{" "}
+                      · {cards.length} cards
+                    </p>
+                    <h2 className="text-2xl md:text-3xl font-semibold mt-1">
+                      {currentPageTitle}
+                    </h2>
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                    <span className="hidden sm:inline">
+                      Tip: צרו דק לכל ספר / קורס / סרט.
+                    </span>
+                  </div>
+                </header>
+
+                {/* CONTENT */}
+                {mode === "edit" && (
+                  <div className="grid lg:grid-cols-[1.1fr,0.9fr] gap-5 mt-2">
+                    {/* Import card */}
+                    <section className="rounded-2xl bg-slate-900/80 border border-slate-800 p-4 space-y-3">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        📥 Import into deck:{" "}
+                        <span className="text-sky-300">
+                          {activeDeck?.name || ""}
+                        </span>
+                      </h3>
+                      <p className="text-xs text-slate-300 leading-relaxed">
+                        Excel / CSV structure:
+                        <br />
+                        <span className="font-mono">
+                          A: Sentence with ____ (one blank)
+                        </span>
+                        <br />
+                        <span className="font-mono">B: English word</span>
+                        <br />
+                        <span className="font-mono">
+                          C: Translation (your language)
+                        </span>
+                      </p>
+                      <input
+                        type="file"
+                        accept=".xlsx,.xls,.csv"
+                        onChange={handleFileUpload}
+                        className="w-full text-xs text-slate-200 file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-sky-500 file:text-white hover:file:bg-sky-400"
+                      />
+                      <p className="text-xs text-slate-400">
+                        אפשר גם להדביק ידנית: כל שורה בפורמט:
+                        <br />
+                        Sentence[TAB]Word[TAB]Translation
+                      </p>
+
+                      <pre className="text-[11px] bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 whitespace-pre-wrap">
+I bought a new ____ yesterday.	car	מכונית
+The firefighter was very ____ today.	brave	אמיץ
+                      </pre>
+                      <textarea
+                        className="w-full h-32 rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm outline-none focus:border-sky-500"
+                        placeholder={`I bought a new ____ yesterday.\tcar\tמכונית`}
+                        value={manualText}
+                        onChange={(e) => setManualText(e.target.value)}
+                      />
+                      <button
+                        onClick={handleUseManualText}
+                        className="w-full inline-flex items-center justify-center rounded-xl bg-sky-500 hover:bg-sky-400 text-sm font-medium px-4 py-2 transition disabled:opacity-40"
+                        disabled={!manualText.trim()}
+                      >
+                        החלף / הוסף משפטים לפי הטקסט
+                      </button>
+                    </section>
+
+                    {/* Sentences list card */}
+                    <section className="rounded-2xl bg-slate-900/80 border border-slate-800 p-4 flex flex-col">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                          📃 Sentences in deck
+                        </h3>
+                        <span className="text-xs text-slate-400">
+                          {cards.length} משפטים
                         </span>
                       </div>
 
-                      <div>
-                        <p className="text-sm mb-2 text-center text-slate-300">
-                          השלם את המילה החסרה במשפט:
+                      {cards.length === 0 ? (
+                        <p className="text-sm text-slate-400">
+                          אין משפטים עדיין בתיקייה הזו. טען קובץ או הדבק טקסט.
                         </p>
-                        <p className="text-2xl md:text-3xl font-semibold text-center text-sky-200">
-                          {currentCard.sentence}
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-                        {options.map((opt) => {
-                          const isCorrect =
-                            opt.word.trim().toLowerCase() ===
-                            currentCard.word.trim().toLowerCase();
-                          const isSelected = selectedOptionId === opt.id;
-
-                          let base =
-                            "text-left rounded-2xl border px-4 py-3 text-base md:text-lg transition flex items-center justify-between gap-2";
-                          let stateClasses = "";
-
-                          if (isSelected) {
-                            stateClasses =
-                              "border-sky-400 bg-slate-800";
-                          } else {
-                            stateClasses =
-                              "border-slate-600 bg-slate-800/60 hover:bg-slate-700";
-                          }
-                          if (revealed && isCorrect) {
-                            stateClasses += " border-emerald-400";
-                          }
-
-                          return (
-                            <button
-                              key={opt.id}
-                              onClick={() => handleChooseOption(opt.id)}
-                              className={`${base} ${stateClasses}`}
+                      ) : (
+                        <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                          {cards.map((card) => (
+                            <div
+                              key={card.id}
+                              className="flex flex-col gap-1 border border-slate-800 rounded-xl px-3 py-2 bg-slate-950/70 text-xs"
                             >
-                              <span className="font-medium">
-                                {opt.word}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  speakWord(opt.word);
-                                }}
-                                className="text-xs px-2 py-1 rounded-lg border border-slate-600 hover:bg-slate-700"
-                                title="השמע באנגלית"
-                              >
-                                🔊
-                              </button>
-                            </button>
-                          );
-                        })}
-                      </div>
+                              <div className="text-[11px] text-slate-400">
+                                Sentence
+                              </div>
+                              <div className="text-slate-100">
+                                {card.sentence}
+                              </div>
+                              <div className="flex items-center justify-between mt-1">
+                                <div>
+                                  <span className="font-semibold text-sky-200">
+                                    {card.word}
+                                  </span>
+                                  {card.translation && (
+                                    <span className="ml-2 text-slate-300">
+                                      ({card.translation})
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => speakWord(card.word)}
+                                    className="text-[11px] px-2 py-1 rounded-lg border border-slate-700 hover:bg-slate-800"
+                                    title="השמע באנגלית"
+                                  >
+                                    🔊
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteCard(card.id)}
+                                    className="text-[11px] px-2 py-1 rounded-lg border border-rose-500 text-rose-300 hover:bg-rose-500/20"
+                                  >
+                                    🗑
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </section>
+                  </div>
+                )}
 
-                      {revealed && (
-                        <div
-                          className={`mt-4 rounded-xl px-4 py-3 text-sm text-center ${feedbackClass}`}
-                        >
-                          <div>{feedback}</div>
-                          {currentCard.translation && (
-                            <div className="mt-1 text-slate-100">
-                              תרגום:{" "}
-                              <span className="font-semibold">
-                                {currentCard.translation}
-                              </span>
+                {/* PRACTICE */}
+                {mode === "practice" && (
+                  <div className="mt-2 flex items-center justify-center">
+                    {!currentCard ? (
+                      <p className="text-sm text-slate-400">
+                        אין משפטים לתרגול בתיקייה הזו. חזור ל"Import & Edit" וטעין
+                        משפטים.
+                      </p>
+                    ) : (
+                      <div className="w-full max-w-2xl space-y-4">
+                        <div className="rounded-3xl bg-slate-900/90 border border-slate-800 shadow-xl p-5 md:p-7 space-y-6">
+                          <div className="flex items-center justify-between text-[11px] text-slate-400">
+                            <span>
+                              Deck: {activeDeck?.name || ""} · Q{" "}
+                              {practiceIndex + 1} / {cards.length}
+                            </span>
+                          </div>
+
+                          <div>
+                            <p className="text-xs mb-2 text-center text-slate-300">
+                              השלם את המילה החסרה במשפט:
+                            </p>
+                            <p className="text-2xl md:text-3xl font-semibold text-center text-sky-200">
+                              {currentCard.sentence}
+                            </p>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                            {options.map((opt) => {
+                              const isCorrect =
+                                opt.word.trim().toLowerCase() ===
+                                currentCard.word.trim().toLowerCase();
+                              const isSelected = selectedOptionId === opt.id;
+
+                              let base =
+                                "text-left rounded-2xl border px-4 py-3 text-base md:text-lg transition flex items-center justify-between gap-2";
+                              let stateClasses = "";
+
+                              if (isSelected) {
+                                stateClasses =
+                                  "border-sky-400 bg-slate-800";
+                              } else {
+                                stateClasses =
+                                  "border-slate-700 bg-slate-900 hover:bg-slate-800";
+                              }
+                              if (revealed && isCorrect) {
+                                stateClasses += " border-emerald-400";
+                              }
+
+                              return (
+                                <button
+                                  key={opt.id}
+                                  onClick={() => handleChooseOption(opt.id)}
+                                  className={`${base} ${stateClasses}`}
+                                >
+                                  <span className="font-medium">
+                                    {opt.word}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      speakWord(opt.word);
+                                    }}
+                                    className="text-xs px-2 py-1 rounded-lg border border-slate-700 hover:bg-slate-800"
+                                    title="השמע באנגלית"
+                                  >
+                                    🔊
+                                  </button>
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {revealed && (
+                            <div
+                              className={`mt-4 rounded-xl px-4 py-3 text-sm text-center ${feedbackClass}`}
+                            >
+                              <div>{feedback}</div>
+                              {currentCard.translation && (
+                                <div className="mt-1 text-slate-100">
+                                  תרגום:{" "}
+                                  <span className="font-semibold">
+                                    {currentCard.translation}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
-                      )}
-                    </div>
 
-                    <div className="flex items-center justify-between mt-3">
-                      <div className="space-x-2">
-                        <button
-                          onClick={handlePrev}
-                          className="rounded-xl border border-slate-600 px-3 py-1.5 text-xs hover:bg-slate-700"
-                        >
-                          קודם
-                        </button>
-                        <button
-                          onClick={handleNext}
-                          className="rounded-xl border border-slate-600 px-3 py-1.5 text-xs hover:bg-slate-700"
-                        >
-                          הבא
-                        </button>
+                        <div className="flex items-center justify-between mt-1 text-xs">
+                          <div className="space-x-2">
+                            <button
+                              onClick={handlePrev}
+                              className="rounded-xl border border-slate-700 px-3 py-1.5 hover:bg-slate-800"
+                            >
+                              קודם
+                            </button>
+                            <button
+                              onClick={handleNext}
+                              className="rounded-xl border border-slate-700 px-3 py-1.5 hover:bg-slate-800"
+                            >
+                              הבא
+                            </button>
+                          </div>
+
+                          <button
+                            onClick={() => setMode("edit")}
+                            className="text-sky-300 hover:underline"
+                          >
+                            חזרה ל־Import & Edit
+                          </button>
+                        </div>
                       </div>
-
-                      <button
-                        onClick={() => setMode("edit")}
-                        className="text-xs text-sky-300 hover:underline"
-                      >
-                        חזרה לייבוא / עריכה
-                      </button>
-                    </div>
+                    )}
                   </div>
                 )}
-              </div>
-            )}
+              </main>
+            </div>
           </div>
         </div>
       );

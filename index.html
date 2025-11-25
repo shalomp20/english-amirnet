@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="he">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <title>Vocabulary Sentence Quiz</title>
@@ -13,13 +13,13 @@
     rel="stylesheet"
   />
 
-  <!-- Tailwind בשביל עיצוב מהיר -->
+  <!-- Tailwind -->
   <link
     href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.css"
     rel="stylesheet"
   />
 
-  <!-- Custom design layer on top of Tailwind -->
+  <!-- Custom design layer -->
   <style>
     :root {
       color-scheme: dark;
@@ -69,34 +69,64 @@
       box-shadow: 0 0 18px rgba(59, 130, 246, 0.6);
     }
 
-    .mode-toggle {
-      background: rgba(15, 23, 42, 0.95);
-      border-radius: 999px;
-      padding: 4px;
-      border: 1px solid rgba(148, 163, 184, 0.55);
-      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.85);
+    .sidebar {
+      background: rgba(15, 23, 42, 0.98);
+      border-radius: 22px;
+      border: 1px solid rgba(30, 64, 175, 0.65);
+      box-shadow:
+        0 18px 50px rgba(15, 23, 42, 0.95),
+        0 0 0 1px rgba(15, 23, 42, 0.9);
     }
 
-    .mode-btn {
+    .sidebar-section-title {
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #9ca3af;
+    }
+
+    .nav-item {
       border-radius: 999px;
+      padding: 0.45rem 0.9rem;
       font-size: 0.8rem;
-      padding: 0.45rem 1.1rem;
-      transition: all 0.16s ease-out;
-      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      cursor: pointer;
+      transition: all 0.15s ease-out;
     }
 
-    .mode-btn-active {
-      background: linear-gradient(135deg, #3b82f6, #6366f1);
+    .nav-item-icon {
+      font-size: 0.95rem;
+    }
+
+    .nav-item-active {
+      background: radial-gradient(circle at left, rgba(59, 130, 246, 0.45), transparent 55%),
+        rgba(15, 23, 42, 0.98);
       color: #f9fafb;
-      box-shadow: 0 0 18px rgba(99, 102, 241, 0.65);
+      box-shadow: 0 12px 30px rgba(37, 99, 235, 0.9);
+      border: 1px solid rgba(191, 219, 254, 0.9);
     }
 
-    .mode-btn-inactive {
+    .nav-item-inactive {
       color: #e5e7eb;
+      border: 1px solid rgba(55, 65, 81, 0.9);
+      background: rgba(15, 23, 42, 0.95);
     }
 
-    .mode-btn-inactive:hover {
-      background: rgba(148, 163, 184, 0.14);
+    .nav-item-inactive:hover {
+      background: rgba(30, 64, 175, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .deck-pill {
+      backdrop-filter: blur(16px);
+      transition: all 0.15s ease-out;
+    }
+
+    .deck-pill:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.9);
     }
 
     .sync-card {
@@ -153,16 +183,6 @@
       box-shadow: 0 12px 32px rgba(22, 163, 74, 0.5);
     }
 
-    .deck-pill {
-      backdrop-filter: blur(16px);
-      transition: all 0.15s ease-out;
-    }
-
-    .deck-pill:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.9);
-    }
-
     .import-card,
     .list-card {
       background: rgba(15, 23, 42, 0.96);
@@ -177,6 +197,24 @@
       border: 1px solid rgba(75, 85, 99, 0.9);
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
         "Liberation Mono", "Courier New", monospace;
+    }
+
+    .quiz-card {
+      background: radial-gradient(circle at top, rgba(59, 130, 246, 0.2), transparent 60%),
+        rgba(15, 23, 42, 0.98);
+      border-radius: 22px;
+      border: 1px solid rgba(75, 85, 99, 0.95);
+      box-shadow: 0 20px 60px rgba(15, 23, 42, 0.95);
+    }
+
+    .blank-chip {
+      display: inline-block;
+      padding: 0.15rem 0.7rem;
+      border-radius: 999px;
+      border: 1px solid rgba(59, 130, 246, 0.85);
+      box-shadow: 0 0 18px rgba(59, 130, 246, 0.7);
+      background: rgba(15, 23, 42, 0.98);
+      margin-inline: 0.15rem;
     }
 
     .option-button {
@@ -219,24 +257,6 @@
       box-shadow: 0 0 24px rgba(248, 113, 113, 0.75);
     }
 
-    .quiz-card {
-      background: radial-gradient(circle at top, rgba(59, 130, 246, 0.2), transparent 60%),
-        rgba(15, 23, 42, 0.98);
-      border-radius: 22px;
-      border: 1px solid rgba(75, 85, 99, 0.95);
-      box-shadow: 0 20px 60px rgba(15, 23, 42, 0.95);
-    }
-
-    .blank-chip {
-      display: inline-block;
-      padding: 0.15rem 0.7rem;
-      border-radius: 999px;
-      border: 1px solid rgba(59, 130, 246, 0.85);
-      box-shadow: 0 0 18px rgba(59, 130, 246, 0.7);
-      background: rgba(15, 23, 42, 0.98);
-      margin-inline: 0.15rem;
-    }
-
     .nav-pill {
       border-radius: 999px;
       border: 1px solid rgba(148, 163, 184, 0.75);
@@ -256,6 +276,24 @@
       background: rgba(15, 23, 42, 0.85);
       padding: 1.25rem 1rem;
     }
+
+    .page-fade {
+      transition: opacity 0.18s ease-out, transform 0.18s ease-out;
+    }
+
+    .page-hidden {
+      opacity: 0;
+      transform: translateY(4px);
+      pointer-events: none;
+      position: absolute;
+      inset: 0;
+    }
+
+    .page-visible {
+      opacity: 1;
+      transform: translateY(0);
+      position: relative;
+    }
   </style>
 </head>
 <body class="text-slate-100">
@@ -266,21 +304,18 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <!-- ספריית XLSX לקריאת קבצי אקסל / CSV -->
+  <!-- XLSX -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <script type="text/babel">
     const { useState, useEffect } = React;
 
-    // 🔗 כאן נכניס את כתובת השרת אחרי שנקים אותו
     const API_BASE = "https://vocab-backend-lbum.onrender.com";
 
-    // לוודא שהקולות נטענים (כרום/מק)
     if ("speechSynthesis" in window) {
       window.speechSynthesis.onvoiceschanged = () => {};
     }
 
-    // ערבוב אקראי של מערך
     function shuffleArray(array) {
       const arr = [...array];
       for (let i = arr.length - 1; i > 0; i--) {
@@ -290,8 +325,6 @@
       return arr;
     }
 
-    // פירסינג של טקסט ידני:
-    // sentence \t word \t translation
     function parseManualText(raw) {
       return raw
         .split(/\n/)
@@ -313,16 +346,13 @@
         .filter((c) => c.sentence && c.word);
     }
 
-    // השמעת מילה באנגלית
     function speakWord(word) {
       if (!("speechSynthesis" in window)) {
-        alert("הדפדפן שלך לא תומך בהקראת טקסט.");
+        alert("Your browser does not support text-to-speech.");
         return;
       }
 
       const utter = new SpeechSynthesisUtterance(word);
-
-      // ניסיון לבחור קול נעים אם קיים
       const voices = window.speechSynthesis.getVoices() || [];
       const preferred = voices.find(
         (v) =>
@@ -339,9 +369,7 @@
     }
 
     function App() {
-      // 🔹 State: תיקיות + סנכרון
       const [decks, setDecks] = useState(() => {
-        // נסיון לטעון מ-localStorage (שימושי גם בלי ענן)
         if (typeof window !== "undefined") {
           try {
             const saved = window.localStorage.getItem("vq_decks_v1");
@@ -355,21 +383,22 @@
             console.warn("Failed to load decks from storage", e);
           }
         }
-        return [{ id: "deck-1", name: "Default", cards: [] }];
+        return [{ id: "deck-1", name: "Default deck", cards: [] }];
       });
 
       const [activeDeckId, setActiveDeckId] = useState("deck-1");
       const [manualText, setManualText] = useState("");
-      const [mode, setMode] = useState("edit"); // "edit" | "practice"
       const [practiceIndex, setPracticeIndex] = useState(0);
-      const [options, setOptions] = useState([]); // 4 כרטיסים כאופציות
+      const [options, setOptions] = useState([]);
       const [selectedOptionId, setSelectedOptionId] = useState(null);
       const [feedback, setFeedback] = useState("");
       const [revealed, setRevealed] = useState(false);
 
-      // 🔹 סנכרון ענן
       const [syncId, setSyncId] = useState("");
       const [cloudStatus, setCloudStatus] = useState("");
+
+      // pages: "import" | "practice" | "cloud"
+      const [page, setPage] = useState("import");
 
       const activeDeck =
         decks.find((d) => d.id === activeDeckId) || decks[0];
@@ -377,7 +406,6 @@
       const hasCards = cards.length > 0;
       const currentCard = hasCards ? cards[practiceIndex] : null;
 
-      // שמירת התיקיות ב-localStorage
       useEffect(() => {
         try {
           window.localStorage.setItem("vq_decks_v1", JSON.stringify(decks));
@@ -386,7 +414,6 @@
         }
       }, [decks]);
 
-      // כל פעם שמתחלפת שאלה / רשימת מילים – בונים אופציות
       useEffect(() => {
         if (!hasCards || !currentCard) {
           setOptions([]);
@@ -413,7 +440,6 @@
         setRevealed(false);
       };
 
-      // עדכון תיקייה פעילה עם כרטיסים חדשים
       const replaceCardsInActiveDeck = (newCards) => {
         setDecks((prev) =>
           prev.map((deck) =>
@@ -423,8 +449,6 @@
         resetPractice();
       };
 
-      // ייבוא מאקסל / CSV לפי המבנה:
-      // Col A: sentence with ____  |  Col B: word  |  Col C: translation
       const handleFileUpload = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -461,7 +485,6 @@
         reader.readAsArrayBuffer(file);
       };
 
-      // ייבוא טקסט ידני (משפט \t מילה \t תרגום)
       const handleUseManualText = () => {
         const parsed = parseManualText(manualText);
         if (parsed.length) {
@@ -493,15 +516,14 @@
           chosen.word.trim().toLowerCase() ===
           currentCard.word.trim().toLowerCase()
         ) {
-          setFeedback("נכון! 🎉");
+          setFeedback("Correct! 🎉");
         } else {
           setFeedback(
-            `לא מדויק. המילה הנכונה היא "${currentCard.word}".`
+            `Not quite. The correct word is "${currentCard.word}".`
           );
         }
       };
 
-      // מחיקת מילה בודדת מהתיקייה הפעילה
       const handleDeleteCard = (cardId) => {
         setDecks((prev) =>
           prev.map((deck) =>
@@ -516,9 +538,10 @@
         resetPractice();
       };
 
-      // יצירת תיקייה חדשה
       const handleAddDeck = () => {
-        const name = prompt("שם תיקייה חדש (למשל: Amir A / Movies / Work):");
+        const name = prompt(
+          "New deck name (e.g. Book A, Work, Movies…):"
+        );
         if (!name || !name.trim()) return;
         const id = `deck-${Date.now()}`;
         const newDeck = { id, name: name.trim(), cards: [] };
@@ -527,15 +550,14 @@
         resetPractice();
       };
 
-      // מחיקת תיקייה
       const handleDeleteDeck = (deckId) => {
         if (decks.length === 1) {
-          alert("לא ניתן למחוק את התיקייה היחידה.");
+          alert("You must keep at least one deck.");
           return;
         }
         const deck = decks.find((d) => d.id === deckId);
         const ok = confirm(
-          `למחוק את התיקייה "${deck?.name}" וכל המשפטים שבה?`
+          `Delete deck "${deck?.name}" and all its sentences?`
         );
         if (!ok) return;
 
@@ -549,19 +571,18 @@
         resetPractice();
       };
 
-      // 🔗 שמירה לענן
       const handleCloudSave = async () => {
         if (!syncId.trim()) {
-          alert("קודם תכתוב Sync ID (למשל: השם שלך באנגלית).");
+          alert("Please enter a Sync ID first.");
           return;
         }
         if (!API_BASE || API_BASE.includes("YOUR-BACKEND-URL")) {
-          alert("לא הוגדר API_BASE. צריך לעדכן את כתובת השרת בקוד.");
+          alert("API_BASE is not configured.");
           return;
         }
 
         try {
-          setCloudStatus("שומר לענן...");
+          setCloudStatus("Saving to cloud…");
           const res = await fetch(
             `${API_BASE}/decks/${encodeURIComponent(syncId.trim())}`,
             {
@@ -573,31 +594,30 @@
           if (!res.ok) {
             throw new Error("Bad response");
           }
-          setCloudStatus("נשמר בענן ✅");
+          setCloudStatus("Saved to cloud ✅");
         } catch (e) {
           console.error(e);
-          setCloudStatus("שגיאה בשמירה לענן ❌");
+          setCloudStatus("Error while saving ❌");
         }
       };
 
-      // 🔗 טעינה מהענן
       const handleCloudLoad = async () => {
         if (!syncId.trim()) {
-          alert("קודם תכתוב Sync ID (למשל: השם שלך באנגלית).");
+          alert("Please enter a Sync ID first.");
           return;
         }
         if (!API_BASE || API_BASE.includes("YOUR-BACKEND-URL")) {
-          alert("לא הוגדר API_BASE. צריך לעדכן את כתובת השרת בקוד.");
+          alert("API_BASE is not configured.");
           return;
         }
 
         try {
-          setCloudStatus("טוען מהענן...");
+          setCloudStatus("Loading from cloud…");
           const res = await fetch(
             `${API_BASE}/decks/${encodeURIComponent(syncId.trim())}`
           );
           if (res.status === 404) {
-            setCloudStatus("לא נמצא מידע לסנכרון הזה.");
+            setCloudStatus("No data found for this Sync ID.");
             return;
           }
           if (!res.ok) {
@@ -615,107 +635,429 @@
           setSelectedOptionId(null);
           setFeedback("");
           setRevealed(false);
-          setCloudStatus("נטען מהענן ✅");
+          setCloudStatus("Loaded from cloud ✅");
         } catch (e) {
           console.error(e);
-          setCloudStatus("שגיאה בטעינה מהענן ❌");
+          setCloudStatus("Error while loading ❌");
         }
       };
 
-      return (
-        <div className="min-h-screen flex items-center justify-center p-4 app-root-bg">
-          <div className="w-full max-w-5xl glass-panel p-6 md:p-8">
-            {/* כותרת */}
-            <header className="flex flex-col gap-4 mb-6">
-              <div className="text-center">
-                <h1 className="app-gradient-title text-3xl md:text-4xl font-semibold mb-1">
-                  Vocabulary Sentence Quiz
-                </h1>
-                <div className="app-title-underline" />
-                <p className="mt-3 text-sm text-slate-300 max-w-2xl mx-auto">
-                  מייבא משפט עם רווח ריק, מילה באנגלית ותרגום. השאלה היא המשפט,
-                  התשובות הן המילים, והתרגום מופיע אחרי הבחירה.
-                </p>
-              </div>
+      const renderImportPage = () => (
+        <div
+          className={
+            "page-fade " +
+            (page === "import" ? "page-visible" : "page-hidden")
+          }
+        >
+          <p className="text-sm text-slate-300 mb-4">
+            Import sentences with a missing word, then practice them as
+            interactive quizzes. Perfect for vocab, exam prep, or movie lines
+            you want to remember.
+          </p>
 
-              <div className="flex items-center justify-center">
-                <div className="mode-toggle inline-flex">
-                  <button
-                    className={
-                      "mode-btn " +
-                      (mode === "edit"
-                        ? "mode-btn-active"
-                        : "mode-btn-inactive")
-                    }
-                    onClick={() => setMode("edit")}
-                  >
-                    1. ייבוא / עריכה
-                  </button>
-                  <button
-                    className={
-                      "mode-btn " +
-                      (mode === "practice"
-                        ? "mode-btn-active"
-                        : "mode-btn-inactive")
-                    }
-                    onClick={() => setMode("practice")}
-                    disabled={!hasCards}
-                  >
-                    2. תרגול
-                  </button>
-                </div>
-              </div>
-            </header>
+          <div className="grid md:grid-cols-[1.25fr,1fr] gap-6">
+            {/* Import */}
+            <section className="space-y-3 import-card p-4">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <span className="text-sky-400 text-base">⬇</span>
+                <span>Import into deck: {activeDeck?.name || ""}</span>
+              </h2>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Excel / CSV structure:
+                <br />
+                <span className="font-mono">
+                  A: Sentence with ____ (one blank)
+                </span>
+                <br />
+                <span className="font-mono">B: English word</span>
+                <br />
+                <span className="font-mono">
+                  C: Translation (your language)
+                </span>
+              </p>
+              <input
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                onChange={handleFileUpload}
+                className="w-full text-xs text-slate-200 file:mr-3 file:px-4 file:py-2 file:rounded-full file:border-0 file:bg-gradient-to-r file:from-sky-500 file:to-indigo-500 file:text-white hover:file:from-sky-400 hover:file:to-indigo-400 file:shadow-lg file:shadow-sky-700/40"
+              />
+              <p className="text-xs text-slate-400">
+                Or paste manually: one line per sentence in this format:
+                <br />
+                <span className="font-mono">
+                  Sentence[TAB]Word[TAB]Translation
+                </span>
+              </p>
 
-            {/* שורת סנכרון ענן */}
-            <section className="sync-card mb-5 p-4 flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
-              <div className="flex-1 flex flex-col gap-1">
-                <div className="flex items-center gap-2 text-xs text-slate-300">
-                  <span className="text-lg">☁️</span>
-                  <span>
-                    Sync ID (אותו מזהה בכל מכשיר כדי לסנכרן ענן – למשל: השם שלך
-                    באנגלית)
-                  </span>
-                </div>
-                <input
-                  type="text"
-                  value={syncId}
-                  onChange={(e) => setSyncId(e.target.value)}
-                  placeholder="למשל: shlomi-english"
-                  className="sync-input px-3 py-1.5 text-sm outline-none focus:border-sky-500 mt-1"
-                />
-                {cloudStatus && (
-                  <span className="text-[11px] text-slate-300 mt-1">
-                    {cloudStatus}
-                  </span>
-                )}
-              </div>
-              <div className="flex gap-2 md:flex-col">
-                <button
-                  onClick={handleCloudSave}
-                  className="sync-pill-btn primary-btn"
-                >
-                  ☁️ שמור לענן
-                </button>
-                <button
-                  onClick={handleCloudLoad}
-                  className="sync-pill-btn outline-success"
-                >
-                  ☁️ טען מהענן
-                </button>
-              </div>
+              <pre className="code-box text-[11px] px-3 py-2 text-slate-200 whitespace-pre-wrap">
+I bought a new ____ yesterday.	car	car (translation)
+The firefighter was very ____ today.	brave	אמיץ
+              </pre>
+              <textarea
+                className="w-full h-32 rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500/60"
+                placeholder={`I bought a new ____ yesterday.\tcar\tcar (translation)`}
+                value={manualText}
+                onChange={(e) => setManualText(e.target.value)}
+              />
+              <button
+                onClick={handleUseManualText}
+                className="w-full inline-flex items-center justify-center rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 text-sm font-medium px-4 py-2 transition disabled:opacity-40 shadow-lg shadow-sky-800/60"
+                disabled={!manualText.trim()}
+              >
+                Replace / add sentences from text
+              </button>
             </section>
 
-            {/* ניהול תיקיות */}
-            <section className="mb-5 flex flex-col gap-3">
-              <div className="flex flex-wrap gap-3 items-center justify-between">
-                <div className="flex flex-wrap gap-2 items-center">
-                  <span className="text-xs text-slate-300">תיקיות:</span>
+            {/* Sentence list */}
+            <section className="space-y-3 list-card p-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <span className="text-emerald-400 text-base">📄</span>
+                  <span>Sentences in this deck</span>
+                </h2>
+                <span className="text-xs text-slate-400">
+                  {cards.length} sentences
+                </span>
+              </div>
+
+              {cards.length === 0 ? (
+                <div className="empty-state text-sm text-slate-300 flex flex-col items-center gap-2">
+                  <div className="text-2xl">📥</div>
+                  <div>
+                    No sentences yet. Import a file or paste text to start
+                    building your deck.
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-72 overflow-y-auto pr-2">
+                  {cards.map((card) => (
+                    <div
+                      key={card.id}
+                      className="flex flex-col gap-1 border border-slate-700 rounded-xl px-3 py-2 bg-slate-900/70 text-xs shadow-sm shadow-slate-900/80"
+                    >
+                      <div className="text-[11px] text-slate-400">
+                        Sentence:
+                      </div>
+                      <div className="text-slate-100">
+                        {card.sentence}
+                      </div>
+                      <div className="flex items-center justify-between mt-1">
+                        <div>
+                          <span className="font-semibold text-sky-300">
+                            {card.word}
+                          </span>
+                          {card.translation && (
+                            <span className="ml-2 text-slate-300">
+                              ({card.translation})
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => speakWord(card.word)}
+                            className="text-[11px] px-2 py-1 rounded-full border border-slate-600 hover:bg-slate-700"
+                            title="Play word in English"
+                          >
+                            🔊
+                          </button>
+                          <button
+                            onClick={() => handleDeleteCard(card.id)}
+                            className="text-[11px] px-2 py-1 rounded-full border border-red-500 text-red-300 hover:bg-red-500/20"
+                          >
+                            🗑
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+        </div>
+      );
+
+      const renderPracticePage = () => (
+        <div
+          className={
+            "page-fade " +
+            (page === "practice" ? "page-visible" : "page-hidden")
+          }
+        >
+          {!currentCard ? (
+            <div className="empty-state text-sm text-slate-300">
+              There are no sentences to practice in this deck yet. Go to{" "}
+              <span className="font-semibold">Import & Edit</span> and load
+              some sentences first.
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-slate-300 mb-3">
+                Choose the correct word to complete the sentence. After you
+                answer, the translation appears to help you connect meaning and
+                form.
+              </p>
+
+              <div className="flex items-center justify-between text-xs text-slate-300 mb-2">
+                <span>
+                  Deck: {activeDeck?.name || ""} · Question{" "}
+                  {practiceIndex + 1} / {cards.length}
+                </span>
+              </div>
+
+              <div className="quiz-card p-4 md:p-5 space-y-4">
+                <div>
+                  <p className="text-sm mb-1 text-slate-300">
+                    Fill in the missing word:
+                  </p>
+                  <p className="text-lg font-semibold text-sky-100 leading-relaxed">
+                    {currentCard.sentence
+                      .replace("____", "<BLANK>")
+                      .split("<BLANK>")
+                      .map((part, idx, arr) => (
+                        <>
+                          {part}
+                          {idx < arr.length - 1 && (
+                            <span className="blank-chip">____</span>
+                          )}
+                        </>
+                      ))}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {options.map((opt) => {
+                    const isCorrect =
+                      opt.word.trim().toLowerCase() ===
+                      currentCard.word.trim().toLowerCase();
+                    const isSelected = selectedOptionId === opt.id;
+                    const isWrongSelected =
+                      revealed && isSelected && !isCorrect;
+
+                    return (
+                      <button
+                        key={opt.id}
+                        onClick={() => handleChooseOption(opt.id)}
+                        className={
+                          "option-button text-left rounded-xl border px-3 py-2 text-sm transition " +
+                          (isSelected
+                            ? "border-sky-400 bg-slate-800"
+                            : "border-slate-600 bg-slate-800/70 hover:bg-slate-700") +
+                          " " +
+                          (revealed && isCorrect ? "option-correct" : "") +
+                          " " +
+                          (isWrongSelected ? "option-wrong" : "")
+                        }
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium text-slate-50">
+                            {opt.word}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              speakWord(opt.word);
+                            }}
+                            className="text-[11px] px-2 py-1 rounded-full border border-slate-600 hover:bg-slate-700"
+                            title="Play word in English"
+                          >
+                            🔊
+                          </button>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {feedback && (
+                  <p className="mt-2 text-sm text-slate-100">{feedback}</p>
+                )}
+
+                {revealed && currentCard.translation && (
+                  <p className="mt-1 text-sm text-slate-200">
+                    Translation:{" "}
+                    <span className="font-semibold text-emerald-300">
+                      {currentCard.translation}
+                    </span>
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between mt-3">
+                <div className="flex gap-2">
+                  <button
+                    onClick={handlePrev}
+                    className="nav-pill text-slate-100"
+                  >
+                    ◀ Previous
+                  </button>
+                  <button
+                    onClick={handleNext}
+                    className="nav-pill text-slate-100"
+                  >
+                    Next ▶
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => setPage("import")}
+                  className="text-xs text-sky-300 hover:underline"
+                >
+                  Go back to Import & Edit
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      );
+
+      const renderCloudPage = () => (
+        <div
+          className={
+            "page-fade " +
+            (page === "cloud" ? "page-visible" : "page-hidden")
+          }
+        >
+          <p className="text-sm text-slate-300 mb-4">
+            Use cloud sync to move your decks between devices. Use the same
+            <span className="font-semibold"> Sync ID</span> on your laptop,
+            phone, or tablet and keep everything in sync.
+          </p>
+
+          <section className="sync-card p-4 flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
+            <div className="flex-1 flex flex-col gap-1">
+              <div className="flex items-center gap-2 text-xs text-slate-300">
+                <span className="text-lg">☁️</span>
+                <span>
+                  Sync ID (use the same ID on every device to share your decks):
+                </span>
+              </div>
+              <input
+                type="text"
+                value={syncId}
+                onChange={(e) => setSyncId(e.target.value)}
+                placeholder="For example: shlomi-english"
+                className="sync-input px-3 py-1.5 text-sm outline-none focus:border-sky-500 mt-1"
+              />
+              {cloudStatus && (
+                <span className="text-[11px] text-slate-300 mt-1">
+                  {cloudStatus}
+                </span>
+              )}
+            </div>
+            <div className="flex gap-2 md:flex-col">
+              <button
+                onClick={handleCloudSave}
+                className="sync-pill-btn primary-btn"
+              >
+                ☁️ Save to cloud
+              </button>
+              <button
+                onClick={handleCloudLoad}
+                className="sync-pill-btn outline-success"
+              >
+                ☁️ Load from cloud
+              </button>
+            </div>
+          </section>
+        </div>
+      );
+
+      const pageTitle =
+        page === "import"
+          ? "Import & Edit"
+          : page === "practice"
+          ? "Practice Mode"
+          : "Cloud Sync";
+
+      const pageSubtitle =
+        page === "import"
+          ? "Build your sentence decks by importing files or pasting text."
+          : page === "practice"
+          ? "Turn your sentences into quick, focused multiple-choice drills."
+          : "Move your decks between devices in just two clicks.";
+
+      return (
+        <div className="min-h-screen flex items-stretch p-4 app-root-bg">
+          {/* Sidebar */}
+          <aside className="hidden md:flex flex-col w-64 mr-4 sidebar p-4 gap-6">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="h-8 w-8 rounded-2xl bg-gradient-to-br from-sky-500 to-emerald-400 flex items-center justify-center text-xl">
+                  📚
+                </div>
+                <div>
+                  <div className="text-xs text-slate-400">
+                    Personal English Lab
+                  </div>
+                  <div className="text-sm font-semibold text-slate-50">
+                    Vocab Sentence Quiz
+                  </div>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Import sentences, practice, and sync your decks across devices.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-4 flex-1">
+              {/* Pages */}
+              <div>
+                <div className="sidebar-section-title mb-2">
+                  PAGES
+                </div>
+                <div className="flex flex-col gap-2">
+                  <button
+                    className={
+                      "nav-item " +
+                      (page === "import"
+                        ? "nav-item-active"
+                        : "nav-item-inactive")
+                    }
+                    onClick={() => setPage("import")}
+                  >
+                    <span className="nav-item-icon">📥</span>
+                    <span>Import & Edit</span>
+                  </button>
+                  <button
+                    className={
+                      "nav-item " +
+                      (page === "practice"
+                        ? "nav-item-active"
+                        : "nav-item-inactive")
+                    }
+                    onClick={() => setPage("practice")}
+                  >
+                    <span className="nav-item-icon">🎯</span>
+                    <span>Practice</span>
+                  </button>
+                  <button
+                    className={
+                      "nav-item " +
+                      (page === "cloud"
+                        ? "nav-item-active"
+                        : "nav-item-inactive")
+                    }
+                    onClick={() => setPage("cloud")}
+                  >
+                    <span className="nav-item-icon">☁️</span>
+                    <span>Cloud Sync</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Decks */}
+              <div className="flex-1 flex flex-col">
+                <div className="sidebar-section-title mb-2">
+                  DECKS
+                </div>
+                <div className="flex flex-col gap-2 flex-1 overflow-y-auto pr-1">
                   {decks.map((deck) => (
                     <div
                       key={deck.id}
                       className={
-                        "deck-pill inline-flex items-center border px-3 py-1 text-xs cursor-pointer " +
+                        "deck-pill inline-flex items-center justify-between border px-3 py-1.5 text-xs cursor-pointer " +
                         (deck.id === activeDeckId
                           ? "bg-sky-600/90 border-sky-300 text-slate-50"
                           : "bg-slate-800/80 border-slate-600 text-slate-100")
@@ -725,282 +1067,99 @@
                         resetPractice();
                       }}
                     >
-                      <span className="mr-1">{deck.name}</span>
-                      <span className="mx-1 text-[10px] text-slate-200">
-                        ({deck.cards.length})
-                      </span>
-                      {decks.length > 1 && (
-                        <button
-                          className="ml-2 text-[10px] text-slate-200 hover:text-red-300"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteDeck(deck.id);
-                          }}
-                        >
-                          ✕
-                        </button>
-                      )}
+                      <div className="flex items-center gap-1">
+                        <span className="text-[11px]">📂</span>
+                        <span className="font-medium">{deck.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-200">
+                          {deck.cards.length}
+                        </span>
+                        {decks.length > 1 && (
+                          <button
+                            className="text-[10px] text-slate-200 hover:text-red-300"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteDeck(deck.id);
+                            }}
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
-
                 <button
                   onClick={handleAddDeck}
-                  className="inline-flex items-center rounded-full bg-emerald-500 hover:bg-emerald-400 text-xs font-medium px-3 py-1.5 shadow-lg shadow-emerald-700/40"
+                  className="mt-2 inline-flex items-center justify-center rounded-full bg-emerald-500 hover:bg-emerald-400 text-xs font-medium px-3 py-1.5 shadow-lg shadow-emerald-700/40"
                 >
-                  + תיקייה חדשה
+                  + New deck
                 </button>
               </div>
-            </section>
+            </div>
 
-            {/* מצב ייבוא / עריכה */}
-            {mode === "edit" && (
-              <div className="grid md:grid-cols-[1.2fr,1fr] gap-6">
-                {/* ייבוא אקסל / טקסט */}
-                <section className="space-y-3 import-card p-4">
-                  <h2 className="text-lg font-semibold flex items-center gap-2">
-                    <span className="text-sky-400 text-base">⬇</span>
-                    <span>ייבוא לתיקייה: {activeDeck?.name || ""}</span>
-                  </h2>
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    מבנה קובץ (Excel / CSV):
-                    <br />
-                    <span className="font-mono">
-                      A: Sentence with ____ (המשפט עם רווח ריק)
-                    </span>
-                    <br />
-                    <span className="font-mono">B: English word</span>
-                    <br />
-                    <span className="font-mono">C: Translation (עברית)</span>
-                  </p>
-                  <input
-                    type="file"
-                    accept=".xlsx,.xls,.csv"
-                    onChange={handleFileUpload}
-                    className="w-full text-xs text-slate-200 file:mr-3 file:px-4 file:py-2 file:rounded-full file:border-0 file:bg-gradient-to-r file:from-sky-500 file:to-indigo-500 file:text-white hover:file:from-sky-400 hover:file:to-indigo-400 file:shadow-lg file:shadow-sky-700/40"
-                  />
-                  <p className="text-xs text-slate-400">
-                    אפשר גם להדביק ידנית: כל שורה בפורמט:
-                    <br />
-                    <span className="font-mono">
-                      Sentence[TAB]Word[TAB]Translation
-                    </span>
-                  </p>
+            <div className="text-[10px] text-slate-500">
+              Tip: create one deck per book / course / TV show.  
+              Sync ID + deck = your personal learning universe 🌍
+            </div>
+          </aside>
 
-                  <pre className="code-box text-[11px] px-3 py-2 text-slate-200 whitespace-pre-wrap">
-I bought a new ____ yesterday.	car	מכונית
-The firefighter was very ____ today.	brave	אמיץ
-                  </pre>
-                  <textarea
-                    className="w-full h-32 rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500/60"
-                    placeholder={`I bought a new ____ yesterday.\tcar\tמכונית`}
-                    value={manualText}
-                    onChange={(e) => setManualText(e.target.value)}
-                  />
-                  <button
-                    onClick={handleUseManualText}
-                    className="w-full inline-flex items-center justify-center rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 text-sm font-medium px-4 py-2 transition disabled:opacity-40 shadow-lg shadow-sky-800/60"
-                    disabled={!manualText.trim()}
-                  >
-                    החלף / הוסף משפטים לפי הטקסט
-                  </button>
-                </section>
-
-                {/* רשימת משפטים בתיקייה */}
-                <section className="space-y-3 list-card p-4">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-semibold flex items-center gap-2">
-                      <span className="text-emerald-400 text-base">📄</span>
-                      <span>משפטים בתיקייה</span>
-                    </h2>
-                    <span className="text-xs text-slate-400">
-                      {cards.length} משפטים
-                    </span>
-                  </div>
-
-                  {cards.length === 0 ? (
-                    <div className="empty-state text-sm text-slate-300 flex flex-col items-center gap-2">
-                      <div className="text-2xl">📥</div>
-                      <div>
-                        אין משפטים עדיין בתיקייה הזו. טען קובץ או הדבק טקסט כדי
-                        להתחיל.
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2 max-h-72 overflow-y-auto pr-2">
-                      {cards.map((card) => (
-                        <div
-                          key={card.id}
-                          className="flex flex-col gap-1 border border-slate-700 rounded-xl px-3 py-2 bg-slate-900/70 text-xs shadow-sm shadow-slate-900/80"
-                        >
-                          <div className="text-[11px] text-slate-400">
-                            משפט:
-                          </div>
-                          <div className="text-slate-100">
-                            {card.sentence}
-                          </div>
-                          <div className="flex items-center justify-between mt-1">
-                            <div>
-                              <span className="font-semibold text-sky-300">
-                                {card.word}
-                              </span>
-                              {card.translation && (
-                                <span className="ml-2 text-slate-300">
-                                  ({card.translation})
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => speakWord(card.word)}
-                                className="text-[11px] px-2 py-1 rounded-full border border-slate-600 hover:bg-slate-700"
-                                title="השמע באנגלית"
-                              >
-                                🔊
-                              </button>
-                              <button
-                                onClick={() => handleDeleteCard(card.id)}
-                                className="text-[11px] px-2 py-1 rounded-full border border-red-500 text-red-300 hover:bg-red-500/20"
-                              >
-                                🗑
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </section>
+          {/* Main content */}
+          <main className="flex-1 glass-panel p-6 md:p-8 relative overflow-hidden">
+            {/* Header */}
+            <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+              <div>
+                <h1 className="app-gradient-title text-3xl md:text-4xl font-semibold mb-1">
+                  Vocabulary Sentence Quiz
+                </h1>
+                <div className="app-title-underline" />
+                <p className="mt-3 text-sm text-slate-300 max-w-2xl">
+                  Turn any list of sentences into a smart quiz. Practice the
+                  right word in the right context, not just isolated vocabulary.
+                </p>
               </div>
-            )}
 
-            {/* מצב תרגול */}
-            {mode === "practice" && (
-              <div className="mt-4 space-y-4">
-                {!currentCard ? (
-                  <p className="text-sm text-slate-300 empty-state">
-                    אין משפטים לתרגול בתיקייה הזו. חזור ל&quot;ייבוא / עריכה&quot; וטעין
-                    משפטים.
-                  </p>
-                ) : (
-                  <>
-                    <div className="flex items-center justify-between text-xs text-slate-300">
-                      <span>
-                        תיקייה: {activeDeck?.name || ""} · שאלה{" "}
-                        {practiceIndex + 1} מתוך {cards.length}
-                      </span>
-                    </div>
-
-                    <div className="quiz-card p-4 md:p-5 space-y-4">
-                      <div>
-                        <p className="text-sm mb-1 text-slate-300">
-                          השלם את המילה החסרה במשפט:
-                        </p>
-                        <p className="text-lg font-semibold text-sky-100 leading-relaxed">
-                          {currentCard.sentence.replace(
-                            "____",
-                            "<BLANK>"
-                          ).split("<BLANK>").map((part, idx, arr) => (
-                            <>
-                              {part}
-                              {idx < arr.length - 1 && (
-                                <span className="blank-chip">____</span>
-                              )}
-                            </>
-                          ))}
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {options.map((opt) => {
-                          const isCorrect =
-                            opt.word.trim().toLowerCase() ===
-                            currentCard.word.trim().toLowerCase();
-                          const isSelected = selectedOptionId === opt.id;
-
-                          const isWrongSelected =
-                            revealed && isSelected && !isCorrect;
-
-                          return (
-                            <button
-                              key={opt.id}
-                              onClick={() => handleChooseOption(opt.id)}
-                              className={
-                                "option-button text-left rounded-xl border px-3 py-2 text-sm transition " +
-                                (isSelected
-                                  ? "border-sky-400 bg-slate-800"
-                                  : "border-slate-600 bg-slate-800/70 hover:bg-slate-700") +
-                                " " +
-                                (revealed && isCorrect ? "option-correct" : "") +
-                                " " +
-                                (isWrongSelected ? "option-wrong" : "")
-                              }
-                            >
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="font-medium text-slate-50">
-                                  {opt.word}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    speakWord(opt.word);
-                                  }}
-                                  className="text-[11px] px-2 py-1 rounded-full border border-slate-600 hover:bg-slate-700"
-                                  title="השמע באנגלית"
-                                >
-                                  🔊
-                                </button>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {feedback && (
-                        <p className="mt-2 text-sm text-slate-100">
-                          {feedback}
-                        </p>
-                      )}
-
-                      {revealed && currentCard.translation && (
-                        <p className="mt-1 text-sm text-slate-200">
-                          תרגום:{" "}
-                          <span className="font-semibold text-emerald-300">
-                            {currentCard.translation}
-                          </span>
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex items-center justify-between mt-2">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={handlePrev}
-                          className="nav-pill text-slate-100"
-                        >
-                          ◀ קודם
-                        </button>
-                        <button
-                          onClick={handleNext}
-                          className="nav-pill text-slate-100"
-                        >
-                          הבא ▶
-                        </button>
-                      </div>
-
-                      <button
-                        onClick={() => setMode("edit")}
-                        className="text-xs text-sky-300 hover:underline"
-                      >
-                        חזרה לייבוא / עריכה
-                      </button>
-                    </div>
-                  </>
-                )}
+              <div className="text-right text-xs text-slate-400">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 border border-slate-700">
+                  <span className="text-emerald-400">●</span>
+                  <span>Active deck: </span>
+                  <span className="font-semibold text-slate-100">
+                    {activeDeck?.name}
+                  </span>
+                  <span className="text-slate-400">
+                    ({cards.length} cards)
+                  </span>
+                </div>
+                <div className="mt-1">
+                  Current page:{" "}
+                  <span className="font-medium text-slate-100">
+                    {pageTitle}
+                  </span>
+                </div>
               </div>
-            )}
-          </div>
+            </header>
+
+            {/* Page title in main */}
+            <div className="mb-4">
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                {page === "import" && <span>📥</span>}
+                {page === "practice" && <span>🎯</span>}
+                {page === "cloud" && <span>☁️</span>}
+                <span>{pageTitle}</span>
+              </h2>
+              <p className="text-xs text-slate-300 mt-1">
+                {pageSubtitle}
+              </p>
+            </div>
+
+            {/* Pages with simple fade transition */}
+            <div className="relative min-h-[260px]">
+              {renderImportPage()}
+              {renderPracticePage()}
+              {renderCloudPage()}
+            </div>
+          </main>
         </div>
       );
     }

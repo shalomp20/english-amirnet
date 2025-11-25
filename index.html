@@ -4,13 +4,261 @@
   <meta charset="UTF-8" />
   <title>Vocabulary Sentence Quiz</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap"
+    rel="stylesheet"
+  />
+
   <!-- Tailwind בשביל עיצוב מהיר -->
   <link
     href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.css"
     rel="stylesheet"
   />
+
+  <!-- Custom design layer on top of Tailwind -->
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+
+    body {
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(56, 189, 248, 0.14), transparent 55%),
+        radial-gradient(circle at top right, rgba(129, 140, 248, 0.14), transparent 55%),
+        radial-gradient(circle at bottom, rgba(34, 197, 94, 0.12), transparent 55%),
+        #020617;
+      min-height: 100vh;
+    }
+
+    .app-root-bg {
+      backdrop-filter: blur(22px);
+    }
+
+    .glass-panel {
+      background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.12), transparent 45%),
+        radial-gradient(circle at bottom right, rgba(16, 185, 129, 0.12), transparent 55%),
+        rgba(15, 23, 42, 0.96);
+      border-radius: 26px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      box-shadow:
+        0 24px 80px rgba(15, 23, 42, 0.95),
+        0 0 0 1px rgba(15, 23, 42, 0.8);
+    }
+
+    .app-gradient-title {
+      font-family: "Playfair Display", "Inter", system-ui, sans-serif;
+      background: linear-gradient(90deg, #3b82f6, #6366f1, #22c55e);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      letter-spacing: 0.02em;
+    }
+
+    .app-title-underline {
+      width: 80px;
+      height: 4px;
+      border-radius: 999px;
+      margin: 4px auto 0;
+      background: linear-gradient(90deg, #3b82f6, #22c55e);
+      box-shadow: 0 0 18px rgba(59, 130, 246, 0.6);
+    }
+
+    .mode-toggle {
+      background: rgba(15, 23, 42, 0.95);
+      border-radius: 999px;
+      padding: 4px;
+      border: 1px solid rgba(148, 163, 184, 0.55);
+      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.85);
+    }
+
+    .mode-btn {
+      border-radius: 999px;
+      font-size: 0.8rem;
+      padding: 0.45rem 1.1rem;
+      transition: all 0.16s ease-out;
+      white-space: nowrap;
+    }
+
+    .mode-btn-active {
+      background: linear-gradient(135deg, #3b82f6, #6366f1);
+      color: #f9fafb;
+      box-shadow: 0 0 18px rgba(99, 102, 241, 0.65);
+    }
+
+    .mode-btn-inactive {
+      color: #e5e7eb;
+    }
+
+    .mode-btn-inactive:hover {
+      background: rgba(148, 163, 184, 0.14);
+    }
+
+    .sync-card {
+      background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.18), transparent 55%),
+        rgba(15, 23, 42, 0.96);
+      border-radius: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.55);
+      box-shadow: 0 18px 50px rgba(15, 23, 42, 0.85);
+    }
+
+    .sync-input {
+      border-radius: 999px;
+      background: #020617;
+      border: 1px solid rgba(148, 163, 184, 0.8);
+      box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.9);
+    }
+
+    .sync-pill-btn {
+      border-radius: 999px;
+      padding: 0.45rem 0.9rem;
+      font-size: 0.7rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.3rem;
+      transition: all 0.16s ease-out;
+      white-space: nowrap;
+    }
+
+    .sync-pill-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .primary-btn {
+      background: linear-gradient(135deg, #3b82f6, #6366f1);
+      color: #f9fafb;
+      box-shadow: 0 12px 28px rgba(59, 130, 246, 0.8);
+      border: none;
+    }
+
+    .primary-btn:hover {
+      filter: brightness(1.05);
+      box-shadow: 0 16px 40px rgba(79, 70, 229, 0.9);
+    }
+
+    .outline-success {
+      border: 1px solid #22c55e;
+      color: #bbf7d0;
+      background: rgba(6, 95, 70, 0.15);
+    }
+
+    .outline-success:hover {
+      background: rgba(34, 197, 94, 0.2);
+      box-shadow: 0 12px 32px rgba(22, 163, 74, 0.5);
+    }
+
+    .deck-pill {
+      backdrop-filter: blur(16px);
+      transition: all 0.15s ease-out;
+    }
+
+    .deck-pill:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.9);
+    }
+
+    .import-card,
+    .list-card {
+      background: rgba(15, 23, 42, 0.96);
+      border-radius: 18px;
+      border: 1px solid rgba(55, 65, 81, 0.95);
+      box-shadow: 0 16px 48px rgba(15, 23, 42, 0.85);
+    }
+
+    .code-box {
+      background: rgba(15, 23, 42, 0.96);
+      border-radius: 14px;
+      border: 1px solid rgba(75, 85, 99, 0.9);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+    }
+
+    .option-button {
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(18px);
+    }
+
+    .option-button::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      background: radial-gradient(circle at top, rgba(129, 140, 248, 0.2), transparent 60%);
+      transition: opacity 0.2s ease-out;
+      pointer-events: none;
+    }
+
+    .option-button:hover::before {
+      opacity: 1;
+    }
+
+    .option-correct {
+      border-color: #22c55e !important;
+      background: rgba(22, 163, 74, 0.18) !important;
+      box-shadow: 0 0 24px rgba(34, 197, 94, 0.75);
+    }
+
+    @keyframes shake {
+      10%, 90% { transform: translateX(-1px); }
+      20%, 80% { transform: translateX(2px); }
+      30%, 50%, 70% { transform: translateX(-4px); }
+      40%, 60% { transform: translateX(4px); }
+    }
+
+    .option-wrong {
+      border-color: #ef4444 !important;
+      background: rgba(127, 29, 29, 0.2) !important;
+      animation: shake 0.22s ease-in-out;
+      box-shadow: 0 0 24px rgba(248, 113, 113, 0.75);
+    }
+
+    .quiz-card {
+      background: radial-gradient(circle at top, rgba(59, 130, 246, 0.2), transparent 60%),
+        rgba(15, 23, 42, 0.98);
+      border-radius: 22px;
+      border: 1px solid rgba(75, 85, 99, 0.95);
+      box-shadow: 0 20px 60px rgba(15, 23, 42, 0.95);
+    }
+
+    .blank-chip {
+      display: inline-block;
+      padding: 0.15rem 0.7rem;
+      border-radius: 999px;
+      border: 1px solid rgba(59, 130, 246, 0.85);
+      box-shadow: 0 0 18px rgba(59, 130, 246, 0.7);
+      background: rgba(15, 23, 42, 0.98);
+      margin-inline: 0.15rem;
+    }
+
+    .nav-pill {
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.75);
+      padding: 0.4rem 0.9rem;
+      font-size: 0.7rem;
+      transition: all 0.15s ease-out;
+    }
+
+    .nav-pill:hover {
+      background: rgba(148, 163, 184, 0.18);
+      transform: translateY(-1px);
+    }
+
+    .empty-state {
+      border-radius: 18px;
+      border: 1px dashed rgba(148, 163, 184, 0.6);
+      background: rgba(15, 23, 42, 0.85);
+      padding: 1.25rem 1rem;
+    }
+  </style>
 </head>
-<body class="bg-slate-900 text-slate-100">
+<body class="text-slate-100">
   <div id="root"></div>
 
   <!-- React + ReactDOM + Babel -->
@@ -26,7 +274,6 @@
 
     // 🔗 כאן נכניס את כתובת השרת אחרי שנקים אותו
     const API_BASE = "https://vocab-backend-lbum.onrender.com";
-
 
     // לוודא שהקולות נטענים (כרום/מק)
     if ("speechSynthesis" in window) {
@@ -77,9 +324,10 @@
 
       // ניסיון לבחור קול נעים אם קיים
       const voices = window.speechSynthesis.getVoices() || [];
-      const preferred = voices.find((v) =>
-        v.name.toLowerCase().includes("samantha") ||   // מק
-        v.name.toLowerCase().includes("google us")     // כרום
+      const preferred = voices.find(
+        (v) =>
+          v.name.toLowerCase().includes("samantha") ||
+          v.name.toLowerCase().includes("google us")
       );
       if (preferred) {
         utter.voice = preferred;
@@ -375,60 +623,69 @@
       };
 
       return (
-        <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-4">
-          <div className="w-full max-w-5xl bg-slate-800 rounded-2xl shadow-xl p-6 md:p-8">
+        <div className="min-h-screen flex items-center justify-center p-4 app-root-bg">
+          <div className="w-full max-w-5xl glass-panel p-6 md:p-8">
             {/* כותרת */}
-            <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-              <div>
-                <h1 className="text-2xl md:text-3xl font-semibold mb-1">
+            <header className="flex flex-col gap-4 mb-6">
+              <div className="text-center">
+                <h1 className="app-gradient-title text-3xl md:text-4xl font-semibold mb-1">
                   Vocabulary Sentence Quiz
                 </h1>
-                <p className="text-sm text-slate-300">
+                <div className="app-title-underline" />
+                <p className="mt-3 text-sm text-slate-300 max-w-2xl mx-auto">
                   מייבא משפט עם רווח ריק, מילה באנגלית ותרגום. השאלה היא המשפט,
                   התשובות הן המילים, והתרגום מופיע אחרי הבחירה.
                 </p>
               </div>
 
-              <div className="inline-flex rounded-xl bg-slate-700 p-1">
-                <button
-                  className={`px-4 py-2 text-sm rounded-lg transition ${
-                    mode === "edit"
-                      ? "bg-slate-900 text-white"
-                      : "text-slate-200 hover:bg-slate-600"
-                  }`}
-                  onClick={() => setMode("edit")}
-                >
-                  1. ייבוא / עריכה
-                </button>
-                <button
-                  className={`px-4 py-2 text-sm rounded-lg transition ${
-                    mode === "practice"
-                      ? "bg-slate-900 text-white"
-                      : "text-slate-200 hover:bg-slate-600"
-                  }`}
-                  onClick={() => setMode("practice")}
-                  disabled={!hasCards}
-                >
-                  2. תרגול
-                </button>
+              <div className="flex items-center justify-center">
+                <div className="mode-toggle inline-flex">
+                  <button
+                    className={
+                      "mode-btn " +
+                      (mode === "edit"
+                        ? "mode-btn-active"
+                        : "mode-btn-inactive")
+                    }
+                    onClick={() => setMode("edit")}
+                  >
+                    1. ייבוא / עריכה
+                  </button>
+                  <button
+                    className={
+                      "mode-btn " +
+                      (mode === "practice"
+                        ? "mode-btn-active"
+                        : "mode-btn-inactive")
+                    }
+                    onClick={() => setMode("practice")}
+                    disabled={!hasCards}
+                  >
+                    2. תרגול
+                  </button>
+                </div>
               </div>
             </header>
 
             {/* שורת סנכרון ענן */}
-            <section className="mb-4 rounded-xl bg-slate-900/70 border border-slate-700 p-3 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+            <section className="sync-card mb-5 p-4 flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
               <div className="flex-1 flex flex-col gap-1">
-                <label className="text-xs text-slate-300">
-                  Sync ID (אותו מזהה בכל מכשיר כדי לסנכרן ענן):
-                </label>
+                <div className="flex items-center gap-2 text-xs text-slate-300">
+                  <span className="text-lg">☁️</span>
+                  <span>
+                    Sync ID (אותו מזהה בכל מכשיר כדי לסנכרן ענן – למשל: השם שלך
+                    באנגלית)
+                  </span>
+                </div>
                 <input
                   type="text"
                   value={syncId}
                   onChange={(e) => setSyncId(e.target.value)}
                   placeholder="למשל: shlomi-english"
-                  className="rounded-lg bg-slate-800 border border-slate-600 px-3 py-1.5 text-sm outline-none focus:border-sky-500"
+                  className="sync-input px-3 py-1.5 text-sm outline-none focus:border-sky-500 mt-1"
                 />
                 {cloudStatus && (
-                  <span className="text-[11px] text-slate-400 mt-1">
+                  <span className="text-[11px] text-slate-300 mt-1">
                     {cloudStatus}
                   </span>
                 )}
@@ -436,13 +693,13 @@
               <div className="flex gap-2 md:flex-col">
                 <button
                   onClick={handleCloudSave}
-                  className="flex-1 md:flex-none rounded-lg border border-sky-500 text-xs px-3 py-1.5 hover:bg-sky-500/10"
+                  className="sync-pill-btn primary-btn"
                 >
                   ☁️ שמור לענן
                 </button>
                 <button
                   onClick={handleCloudLoad}
-                  className="flex-1 md:flex-none rounded-lg border border-emerald-500 text-xs px-3 py-1.5 hover:bg-emerald-500/10"
+                  className="sync-pill-btn outline-success"
                 >
                   ☁️ טען מהענן
                 </button>
@@ -450,18 +707,19 @@
             </section>
 
             {/* ניהול תיקיות */}
-            <section className="mb-4 flex flex-col gap-3">
-              <div className="flex flex-wrap gap-2 items-center justify-between">
+            <section className="mb-5 flex flex-col gap-3">
+              <div className="flex flex-wrap gap-3 items-center justify-between">
                 <div className="flex flex-wrap gap-2 items-center">
                   <span className="text-xs text-slate-300">תיקיות:</span>
                   {decks.map((deck) => (
                     <div
                       key={deck.id}
-                      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs cursor-pointer ${
-                        deck.id === activeDeckId
-                          ? "bg-sky-600 border-sky-400"
-                          : "bg-slate-700 border-slate-600 hover:bg-slate-600"
-                      }`}
+                      className={
+                        "deck-pill inline-flex items-center border px-3 py-1 text-xs cursor-pointer " +
+                        (deck.id === activeDeckId
+                          ? "bg-sky-600/90 border-sky-300 text-slate-50"
+                          : "bg-slate-800/80 border-slate-600 text-slate-100")
+                      }
                       onClick={() => {
                         setActiveDeckId(deck.id);
                         resetPractice();
@@ -488,7 +746,7 @@
 
                 <button
                   onClick={handleAddDeck}
-                  className="inline-flex items-center rounded-full bg-emerald-500 hover:bg-emerald-400 text-xs font-medium px-3 py-1.5"
+                  className="inline-flex items-center rounded-full bg-emerald-500 hover:bg-emerald-400 text-xs font-medium px-3 py-1.5 shadow-lg shadow-emerald-700/40"
                 >
                   + תיקייה חדשה
                 </button>
@@ -499,9 +757,10 @@
             {mode === "edit" && (
               <div className="grid md:grid-cols-[1.2fr,1fr] gap-6">
                 {/* ייבוא אקסל / טקסט */}
-                <section className="space-y-3">
-                  <h2 className="text-lg font-medium">
-                    ייבוא לתיקייה: {activeDeck?.name || ""}
+                <section className="space-y-3 import-card p-4">
+                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <span className="text-sky-400 text-base">⬇</span>
+                    <span>ייבוא לתיקייה: {activeDeck?.name || ""}</span>
                   </h2>
                   <p className="text-xs text-slate-300 leading-relaxed">
                     מבנה קובץ (Excel / CSV):
@@ -518,27 +777,29 @@
                     type="file"
                     accept=".xlsx,.xls,.csv"
                     onChange={handleFileUpload}
-                    className="w-full text-xs text-slate-200 file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-sky-500 file:text-white hover:file:bg-sky-400"
+                    className="w-full text-xs text-slate-200 file:mr-3 file:px-4 file:py-2 file:rounded-full file:border-0 file:bg-gradient-to-r file:from-sky-500 file:to-indigo-500 file:text-white hover:file:from-sky-400 hover:file:to-indigo-400 file:shadow-lg file:shadow-sky-700/40"
                   />
                   <p className="text-xs text-slate-400">
                     אפשר גם להדביק ידנית: כל שורה בפורמט:
                     <br />
-                    Sentence[TAB]Word[TAB]Translation
+                    <span className="font-mono">
+                      Sentence[TAB]Word[TAB]Translation
+                    </span>
                   </p>
 
-                  <pre className="text-[11px] bg-slate-900/80 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 whitespace-pre-wrap">
+                  <pre className="code-box text-[11px] px-3 py-2 text-slate-200 whitespace-pre-wrap">
 I bought a new ____ yesterday.	car	מכונית
 The firefighter was very ____ today.	brave	אמיץ
                   </pre>
                   <textarea
-                    className="w-full h-32 rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm outline-none focus:border-sky-500"
+                    className="w-full h-32 rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500/60"
                     placeholder={`I bought a new ____ yesterday.\tcar\tמכונית`}
                     value={manualText}
                     onChange={(e) => setManualText(e.target.value)}
                   />
                   <button
                     onClick={handleUseManualText}
-                    className="w-full inline-flex items-center justify-center rounded-xl bg-sky-500 hover:bg-sky-400 text-sm font-medium px-4 py-2 transition disabled:opacity-40"
+                    className="w-full inline-flex items-center justify-center rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 text-sm font-medium px-4 py-2 transition disabled:opacity-40 shadow-lg shadow-sky-800/60"
                     disabled={!manualText.trim()}
                   >
                     החלף / הוסף משפטים לפי הטקסט
@@ -546,34 +807,41 @@ The firefighter was very ____ today.	brave	אמיץ
                 </section>
 
                 {/* רשימת משפטים בתיקייה */}
-                <section className="space-y-3">
+                <section className="space-y-3 list-card p-4">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-medium">משפטים בתיקייה</h2>
+                    <h2 className="text-lg font-semibold flex items-center gap-2">
+                      <span className="text-emerald-400 text-base">📄</span>
+                      <span>משפטים בתיקייה</span>
+                    </h2>
                     <span className="text-xs text-slate-400">
                       {cards.length} משפטים
                     </span>
                   </div>
 
                   {cards.length === 0 ? (
-                    <p className="text-sm text-slate-400">
-                      אין משפטים עדיין בתיקייה הזו. טען קובץ או הדבק טקסט.
-                    </p>
+                    <div className="empty-state text-sm text-slate-300 flex flex-col items-center gap-2">
+                      <div className="text-2xl">📥</div>
+                      <div>
+                        אין משפטים עדיין בתיקייה הזו. טען קובץ או הדבק טקסט כדי
+                        להתחיל.
+                      </div>
+                    </div>
                   ) : (
                     <div className="space-y-2 max-h-72 overflow-y-auto pr-2">
                       {cards.map((card) => (
                         <div
                           key={card.id}
-                          className="flex flex-col gap-1 border border-slate-700 rounded-xl px-3 py-2 bg-slate-900/60 text-xs"
+                          className="flex flex-col gap-1 border border-slate-700 rounded-xl px-3 py-2 bg-slate-900/70 text-xs shadow-sm shadow-slate-900/80"
                         >
                           <div className="text-[11px] text-slate-400">
                             משפט:
                           </div>
-                          <div className="text-slate-200">
+                          <div className="text-slate-100">
                             {card.sentence}
                           </div>
                           <div className="flex items-center justify-between mt-1">
                             <div>
-                              <span className="font-semibold text-sky-200">
+                              <span className="font-semibold text-sky-300">
                                 {card.word}
                               </span>
                               {card.translation && (
@@ -585,14 +853,14 @@ The firefighter was very ____ today.	brave	אמיץ
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => speakWord(card.word)}
-                                className="text-[11px] px-2 py-1 rounded-lg border border-slate-600 hover:bg-slate-700"
+                                className="text-[11px] px-2 py-1 rounded-full border border-slate-600 hover:bg-slate-700"
                                 title="השמע באנגלית"
                               >
                                 🔊
                               </button>
                               <button
                                 onClick={() => handleDeleteCard(card.id)}
-                                className="text-[11px] px-2 py-1 rounded-lg border border-red-500 text-red-300 hover:bg-red-500/20"
+                                className="text-[11px] px-2 py-1 rounded-full border border-red-500 text-red-300 hover:bg-red-500/20"
                               >
                                 🗑
                               </button>
@@ -610,26 +878,36 @@ The firefighter was very ____ today.	brave	אמיץ
             {mode === "practice" && (
               <div className="mt-4 space-y-4">
                 {!currentCard ? (
-                  <p className="text-sm text-slate-400">
-                    אין משפטים לתרגול בתיקייה הזו. חזור ל"ייבוא / עריכה" וטעין
+                  <p className="text-sm text-slate-300 empty-state">
+                    אין משפטים לתרגול בתיקייה הזו. חזור ל&quot;ייבוא / עריכה&quot; וטעין
                     משפטים.
                   </p>
                 ) : (
                   <>
-                    <div className="flex items-center justify-between text-xs text-slate-400">
+                    <div className="flex items-center justify-between text-xs text-slate-300">
                       <span>
                         תיקייה: {activeDeck?.name || ""} · שאלה{" "}
                         {practiceIndex + 1} מתוך {cards.length}
                       </span>
                     </div>
 
-                    <div className="rounded-2xl border border-slate-700 bg-slate-900/60 p-4 space-y-4">
+                    <div className="quiz-card p-4 md:p-5 space-y-4">
                       <div>
-                        <p className="text-sm mb-1">
+                        <p className="text-sm mb-1 text-slate-300">
                           השלם את המילה החסרה במשפט:
                         </p>
-                        <p className="text-lg font-semibold text-sky-200">
-                          {currentCard.sentence}
+                        <p className="text-lg font-semibold text-sky-100 leading-relaxed">
+                          {currentCard.sentence.replace(
+                            "____",
+                            "<BLANK>"
+                          ).split("<BLANK>").map((part, idx, arr) => (
+                            <>
+                              {part}
+                              {idx < arr.length - 1 && (
+                                <span className="blank-chip">____</span>
+                              )}
+                            </>
+                          ))}
                         </p>
                       </div>
 
@@ -640,20 +918,26 @@ The firefighter was very ____ today.	brave	אמיץ
                             currentCard.word.trim().toLowerCase();
                           const isSelected = selectedOptionId === opt.id;
 
+                          const isWrongSelected =
+                            revealed && isSelected && !isCorrect;
+
                           return (
                             <button
                               key={opt.id}
                               onClick={() => handleChooseOption(opt.id)}
-                              className={`text-left rounded-xl border px-3 py-2 text-sm transition ${
-                                isSelected
+                              className={
+                                "option-button text-left rounded-xl border px-3 py-2 text-sm transition " +
+                                (isSelected
                                   ? "border-sky-400 bg-slate-800"
-                                  : "border-slate-600 bg-slate-800/60 hover:bg-slate-700"
-                              } ${
-                                revealed && isCorrect ? "border-emerald-400" : ""
-                              }`}
+                                  : "border-slate-600 bg-slate-800/70 hover:bg-slate-700") +
+                                " " +
+                                (revealed && isCorrect ? "option-correct" : "") +
+                                " " +
+                                (isWrongSelected ? "option-wrong" : "")
+                              }
                             >
                               <div className="flex items-center justify-between gap-2">
-                                <span className="font-medium">
+                                <span className="font-medium text-slate-50">
                                   {opt.word}
                                 </span>
                                 <button
@@ -662,7 +946,7 @@ The firefighter was very ____ today.	brave	אמיץ
                                     e.stopPropagation();
                                     speakWord(opt.word);
                                   }}
-                                  className="text-[11px] px-2 py-1 rounded-lg border border-slate-600 hover:bg-slate-700"
+                                  className="text-[11px] px-2 py-1 rounded-full border border-slate-600 hover:bg-slate-700"
                                   title="השמע באנגלית"
                                 >
                                   🔊
@@ -674,13 +958,15 @@ The firefighter was very ____ today.	brave	אמיץ
                       </div>
 
                       {feedback && (
-                        <p className="mt-2 text-sm">{feedback}</p>
+                        <p className="mt-2 text-sm text-slate-100">
+                          {feedback}
+                        </p>
                       )}
 
                       {revealed && currentCard.translation && (
                         <p className="mt-1 text-sm text-slate-200">
                           תרגום:{" "}
-                          <span className="font-semibold">
+                          <span className="font-semibold text-emerald-300">
                             {currentCard.translation}
                           </span>
                         </p>
@@ -688,18 +974,18 @@ The firefighter was very ____ today.	brave	אמיץ
                     </div>
 
                     <div className="flex items-center justify-between mt-2">
-                      <div className="space-x-2">
+                      <div className="flex gap-2">
                         <button
                           onClick={handlePrev}
-                          className="rounded-xl border border-slate-600 px-3 py-1.5 text-xs hover:bg-slate-700"
+                          className="nav-pill text-slate-100"
                         >
-                          קודם
+                          ◀ קודם
                         </button>
                         <button
                           onClick={handleNext}
-                          className="rounded-xl border border-slate-600 px-3 py-1.5 text-xs hover:bg-slate-700"
+                          className="nav-pill text-slate-100"
                         >
-                          הבא
+                          הבא ▶
                         </button>
                       </div>
 

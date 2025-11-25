@@ -21,7 +21,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <script type="text/babel">
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useMemo } = React;
 
     const API_BASE = "https://vocab-backend-lbum.onrender.com";
 
@@ -151,10 +151,11 @@
       const hasCards = cards.length > 0;
 
       // 🔎 כרטיסים רלוונטיים למצב תרגול/מבחן
-      const quizCards =
-        mode === "test"
+      const quizCards = useMemo(() => {
+        return mode === "test"
           ? cards.filter((c) => (c.status || "unknown") !== "known")
           : cards;
+      }, [cards, mode]);
 
       const hasQuizCards = quizCards.length > 0;
       const currentCard = hasQuizCards ? quizCards[practiceIndex] : null;

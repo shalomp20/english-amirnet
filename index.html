@@ -1,513 +1,1170 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <title>LinguaFill - Modern English Learning</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8" />
+  <title>Vocabulary Sentence Quiz</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap"
+    rel="stylesheet"
+  />
 
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://unpkg.com/lucide-react/dist/umd/lucide-react.min.js"></script>
+  <!-- Tailwind -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.css"
+    rel="stylesheet"
+  />
 
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-        
-        /* Custom Animations */
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
-        
-        .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
-        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
-    </style>
+  <!-- Custom design layer -->
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+
+    body {
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(56, 189, 248, 0.14), transparent 55%),
+        radial-gradient(circle at top right, rgba(129, 140, 248, 0.14), transparent 55%),
+        radial-gradient(circle at bottom, rgba(34, 197, 94, 0.12), transparent 55%),
+        #020617;
+      min-height: 100vh;
+    }
+
+    .app-root-bg {
+      backdrop-filter: blur(22px);
+    }
+
+    .glass-panel {
+      background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.12), transparent 45%),
+        radial-gradient(circle at bottom right, rgba(16, 185, 129, 0.12), transparent 55%),
+        rgba(15, 23, 42, 0.96);
+      border-radius: 26px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      box-shadow:
+        0 24px 80px rgba(15, 23, 42, 0.95),
+        0 0 0 1px rgba(15, 23, 42, 0.8);
+    }
+
+    .app-gradient-title {
+      font-family: "Playfair Display", "Inter", system-ui, sans-serif;
+      background: linear-gradient(90deg, #3b82f6, #6366f1, #22c55e);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      letter-spacing: 0.02em;
+    }
+
+    .app-title-underline {
+      width: 80px;
+      height: 4px;
+      border-radius: 999px;
+      margin: 4px auto 0;
+      background: linear-gradient(90deg, #3b82f6, #22c55e);
+      box-shadow: 0 0 18px rgba(59, 130, 246, 0.6);
+    }
+
+    .sidebar {
+      background: rgba(15, 23, 42, 0.98);
+      border-radius: 22px;
+      border: 1px solid rgba(30, 64, 175, 0.65);
+      box-shadow:
+        0 18px 50px rgba(15, 23, 42, 0.95),
+        0 0 0 1px rgba(15, 23, 42, 0.9);
+    }
+
+    .sidebar-section-title {
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #9ca3af;
+    }
+
+    .nav-item {
+      border-radius: 999px;
+      padding: 0.45rem 0.9rem;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      cursor: pointer;
+      transition: all 0.15s ease-out;
+    }
+
+    .nav-item-icon {
+      font-size: 0.95rem;
+    }
+
+    .nav-item-active {
+      background: radial-gradient(circle at left, rgba(59, 130, 246, 0.45), transparent 55%),
+        rgba(15, 23, 42, 0.98);
+      color: #f9fafb;
+      box-shadow: 0 12px 30px rgba(37, 99, 235, 0.9);
+      border: 1px solid rgba(191, 219, 254, 0.9);
+    }
+
+    .nav-item-inactive {
+      color: #e5e7eb;
+      border: 1px solid rgba(55, 65, 81, 0.9);
+      background: rgba(15, 23, 42, 0.95);
+    }
+
+    .nav-item-inactive:hover {
+      background: rgba(30, 64, 175, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .deck-pill {
+      backdrop-filter: blur(16px);
+      transition: all 0.15s ease-out;
+    }
+
+    .deck-pill:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.9);
+    }
+
+    .sync-card {
+      background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.18), transparent 55%),
+        rgba(15, 23, 42, 0.96);
+      border-radius: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.55);
+      box-shadow: 0 18px 50px rgba(15, 23, 42, 0.85);
+    }
+
+    .sync-input {
+      border-radius: 999px;
+      background: #020617;
+      border: 1px solid rgba(148, 163, 184, 0.8);
+      box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.9);
+    }
+
+    .sync-pill-btn {
+      border-radius: 999px;
+      padding: 0.45rem 0.9rem;
+      font-size: 0.7rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.3rem;
+      transition: all 0.16s ease-out;
+      white-space: nowrap;
+    }
+
+    .sync-pill-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .primary-btn {
+      background: linear-gradient(135deg, #3b82f6, #6366f1);
+      color: #f9fafb;
+      box-shadow: 0 12px 28px rgba(59, 130, 246, 0.8);
+      border: none;
+    }
+
+    .primary-btn:hover {
+      filter: brightness(1.05);
+      box-shadow: 0 16px 40px rgba(79, 70, 229, 0.9);
+    }
+
+    .outline-success {
+      border: 1px solid #22c55e;
+      color: #bbf7d0;
+      background: rgba(6, 95, 70, 0.15);
+    }
+
+    .outline-success:hover {
+      background: rgba(34, 197, 94, 0.2);
+      box-shadow: 0 12px 32px rgba(22, 163, 74, 0.5);
+    }
+
+    .import-card,
+    .list-card {
+      background: rgba(15, 23, 42, 0.96);
+      border-radius: 18px;
+      border: 1px solid rgba(55, 65, 81, 0.95);
+      box-shadow: 0 16px 48px rgba(15, 23, 42, 0.85);
+    }
+
+    .code-box {
+      background: rgba(15, 23, 42, 0.96);
+      border-radius: 14px;
+      border: 1px solid rgba(75, 85, 99, 0.9);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+    }
+
+    .quiz-card {
+      background: radial-gradient(circle at top, rgba(59, 130, 246, 0.2), transparent 60%),
+        rgba(15, 23, 42, 0.98);
+      border-radius: 22px;
+      border: 1px solid rgba(75, 85, 99, 0.95);
+      box-shadow: 0 20px 60px rgba(15, 23, 42, 0.95);
+    }
+
+    .blank-chip {
+      display: inline-block;
+      padding: 0.15rem 0.7rem;
+      border-radius: 999px;
+      border: 1px solid rgba(59, 130, 246, 0.85);
+      box-shadow: 0 0 18px rgba(59, 130, 246, 0.7);
+      background: rgba(15, 23, 42, 0.98);
+      margin-inline: 0.15rem;
+    }
+
+    .option-button {
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(18px);
+    }
+
+    .option-button::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      background: radial-gradient(circle at top, rgba(129, 140, 248, 0.2), transparent 60%);
+      transition: opacity 0.2s ease-out;
+      pointer-events: none;
+    }
+
+    .option-button:hover::before {
+      opacity: 1;
+    }
+
+    .option-correct {
+      border-color: #22c55e !important;
+      background: rgba(22, 163, 74, 0.18) !important;
+      box-shadow: 0 0 24px rgba(34, 197, 94, 0.75);
+    }
+
+    @keyframes shake {
+      10%, 90% { transform: translateX(-1px); }
+      20%, 80% { transform: translateX(2px); }
+      30%, 50%, 70% { transform: translateX(-4px); }
+      40%, 60% { transform: translateX(4px); }
+    }
+
+    .option-wrong {
+      border-color: #ef4444 !important;
+      background: rgba(127, 29, 29, 0.2) !important;
+      animation: shake 0.22s ease-in-out;
+      box-shadow: 0 0 24px rgba(248, 113, 113, 0.75);
+    }
+
+    .nav-pill {
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.75);
+      padding: 0.4rem 0.9rem;
+      font-size: 0.7rem;
+      transition: all 0.15s ease-out;
+    }
+
+    .nav-pill:hover {
+      background: rgba(148, 163, 184, 0.18);
+      transform: translateY(-1px);
+    }
+
+    .empty-state {
+      border-radius: 18px;
+      border: 1px dashed rgba(148, 163, 184, 0.6);
+      background: rgba(15, 23, 42, 0.85);
+      padding: 1.25rem 1rem;
+    }
+
+    .page-fade {
+      transition: opacity 0.18s ease-out, transform 0.18s ease-out;
+    }
+
+    .page-hidden {
+      opacity: 0;
+      transform: translateY(4px);
+      pointer-events: none;
+      position: absolute;
+      inset: 0;
+    }
+
+    .page-visible {
+      opacity: 1;
+      transform: translateY(0);
+      position: relative;
+    }
+  </style>
 </head>
-<body>
-    <div id="root"></div>
+<body class="text-slate-100">
+  <div id="root"></div>
 
-    <script type="text/babel">
-        const { useState, useEffect } = React;
-        const { BookOpen, Upload, User, Check, X, ArrowRight, Play, Trash2, Plus, Cloud, RefreshCw, Layers } = lucideReact;
+  <!-- React + ReactDOM + Babel -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-        const API_BASE = "https://vocab-backend-lbum.onrender.com";
+  <!-- XLSX -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-        // --- Logic Helpers ---
-        function shuffleArray(array) {
-            const arr = [...array];
-            for (let i = arr.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [arr[i], arr[j]] = [arr[j], arr[i]];
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const API_BASE = "https://vocab-backend-lbum.onrender.com";
+
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.onvoiceschanged = () => {};
+    }
+
+    function shuffleArray(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function parseManualText(raw) {
+      return raw
+        .split(/\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line, index) => {
+          const parts = line.split(/\t/);
+          const sentence = parts[0] ? String(parts[0]).trim() : "";
+          const word = parts[1] ? String(parts[1]).trim() : "";
+          const translation = parts[2] ? String(parts[2]).trim() : "";
+
+          return {
+            id: `manual-${Date.now()}-${index}`,
+            sentence,
+            word,
+            translation,
+          };
+        })
+        .filter((c) => c.sentence && c.word);
+    }
+
+    function speakWord(word) {
+      if (!("speechSynthesis" in window)) {
+        alert("Your browser does not support text-to-speech.");
+        return;
+      }
+
+      const utter = new SpeechSynthesisUtterance(word);
+      const voices = window.speechSynthesis.getVoices() || [];
+      const preferred = voices.find(
+        (v) =>
+          v.name.toLowerCase().includes("samantha") ||
+          v.name.toLowerCase().includes("google us")
+      );
+      if (preferred) {
+        utter.voice = preferred;
+      }
+
+      utter.lang = "en-US";
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utter);
+    }
+
+    function App() {
+      const [decks, setDecks] = useState(() => {
+        if (typeof window !== "undefined") {
+          try {
+            const saved = window.localStorage.getItem("vq_decks_v1");
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              if (Array.isArray(parsed) && parsed.length) {
+                return parsed;
+              }
             }
-            return arr;
+          } catch (e) {
+            console.warn("Failed to load decks from storage", e);
+          }
+        }
+        return [{ id: "deck-1", name: "Default deck", cards: [] }];
+      });
+
+      const [activeDeckId, setActiveDeckId] = useState("deck-1");
+      const [manualText, setManualText] = useState("");
+      const [practiceIndex, setPracticeIndex] = useState(0);
+      const [options, setOptions] = useState([]);
+      const [selectedOptionId, setSelectedOptionId] = useState(null);
+      const [feedback, setFeedback] = useState("");
+      const [revealed, setRevealed] = useState(false);
+
+      const [syncId, setSyncId] = useState("");
+      const [cloudStatus, setCloudStatus] = useState("");
+
+      // pages: "import" | "practice" | "cloud"
+      const [page, setPage] = useState("import");
+
+      const activeDeck =
+        decks.find((d) => d.id === activeDeckId) || decks[0];
+      const cards = activeDeck ? activeDeck.cards : [];
+      const hasCards = cards.length > 0;
+      const currentCard = hasCards ? cards[practiceIndex] : null;
+
+      useEffect(() => {
+        try {
+          window.localStorage.setItem("vq_decks_v1", JSON.stringify(decks));
+        } catch (e) {
+          console.warn("Failed to save decks to storage", e);
+        }
+      }, [decks]);
+
+      useEffect(() => {
+        if (!hasCards || !currentCard) {
+          setOptions([]);
+          return;
         }
 
-        function speakWord(word) {
-            if (!("speechSynthesis" in window)) return;
-            const utter = new SpeechSynthesisUtterance(word);
-            utter.lang = "en-US";
-            window.speechSynthesis.cancel();
-            window.speechSynthesis.speak(utter);
+        const others = cards.filter((c, idx) => idx !== practiceIndex);
+        const distractors = shuffleArray(others).slice(
+          0,
+          Math.min(3, others.length)
+        );
+        const combined = shuffleArray([currentCard, ...distractors]);
+
+        setOptions(combined);
+        setSelectedOptionId(null);
+        setFeedback("");
+        setRevealed(false);
+      }, [cards, practiceIndex, hasCards, currentCard]);
+
+      const resetPractice = () => {
+        setPracticeIndex(0);
+        setSelectedOptionId(null);
+        setFeedback("");
+        setRevealed(false);
+      };
+
+      const replaceCardsInActiveDeck = (newCards) => {
+        setDecks((prev) =>
+          prev.map((deck) =>
+            deck.id === activeDeckId ? { ...deck, cards: newCards } : deck
+          )
+        );
+        resetPractice();
+      };
+
+      const handleFileUpload = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const data = new Uint8Array(evt.target.result);
+          const workbook = XLSX.read(data, { type: "array" });
+          const firstSheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[firstSheetName];
+          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+          const newCards = rows
+            .filter((row) => row && row[0] && row[1])
+            .map((row, index) => {
+              const sentence = String(row[0]).trim();
+              const word = String(row[1]).trim();
+              const translation = row[2] ? String(row[2]).trim() : "";
+
+              return {
+                id: `excel-${Date.now()}-${index}`,
+                sentence,
+                word,
+                translation,
+              };
+            })
+            .filter((c) => c.sentence && c.word);
+
+          if (newCards.length) {
+            replaceCardsInActiveDeck(newCards);
+          }
+        };
+
+        reader.readAsArrayBuffer(file);
+      };
+
+      const handleUseManualText = () => {
+        const parsed = parseManualText(manualText);
+        if (parsed.length) {
+          replaceCardsInActiveDeck(parsed);
+        }
+      };
+
+      const handlePrev = () => {
+        if (!hasCards) return;
+        setPracticeIndex((prev) =>
+          prev - 1 < 0 ? cards.length - 1 : prev - 1
+        );
+      };
+
+      const handleNext = () => {
+        if (!hasCards) return;
+        setPracticeIndex((prev) => (prev + 1) % cards.length);
+      };
+
+      const handleChooseOption = (optionId) => {
+        if (!currentCard || !options.length) return;
+        const chosen = options.find((o) => o.id === optionId);
+        if (!chosen) return;
+
+        setSelectedOptionId(optionId);
+        setRevealed(true);
+
+        if (
+          chosen.word.trim().toLowerCase() ===
+          currentCard.word.trim().toLowerCase()
+        ) {
+          setFeedback("Correct! 🎉");
+        } else {
+          setFeedback(
+            `Not quite. The correct word is "${currentCard.word}".`
+          );
+        }
+      };
+
+      const handleDeleteCard = (cardId) => {
+        setDecks((prev) =>
+          prev.map((deck) =>
+            deck.id === activeDeckId
+              ? {
+                  ...deck,
+                  cards: deck.cards.filter((c) => c.id !== cardId),
+                }
+              : deck
+          )
+        );
+        resetPractice();
+      };
+
+      const handleAddDeck = () => {
+        const name = prompt(
+          "New deck name (e.g. Book A, Work, Movies…):"
+        );
+        if (!name || !name.trim()) return;
+        const id = `deck-${Date.now()}`;
+        const newDeck = { id, name: name.trim(), cards: [] };
+        setDecks((prev) => [...prev, newDeck]);
+        setActiveDeckId(id);
+        resetPractice();
+      };
+
+      const handleDeleteDeck = (deckId) => {
+        if (decks.length === 1) {
+          alert("You must keep at least one deck.");
+          return;
+        }
+        const deck = decks.find((d) => d.id === deckId);
+        const ok = confirm(
+          `Delete deck "${deck?.name}" and all its sentences?`
+        );
+        if (!ok) return;
+
+        setDecks((prev) => prev.filter((d) => d.id !== deckId));
+        if (activeDeckId === deckId) {
+          const remaining = decks.filter((d) => d.id !== deckId);
+          if (remaining.length > 0) {
+            setActiveDeckId(remaining[0].id);
+          }
+        }
+        resetPractice();
+      };
+
+      const handleCloudSave = async () => {
+        if (!syncId.trim()) {
+          alert("Please enter a Sync ID first.");
+          return;
+        }
+        if (!API_BASE || API_BASE.includes("YOUR-BACKEND-URL")) {
+          alert("API_BASE is not configured.");
+          return;
         }
 
-        function parseManualText(raw) {
-            return raw.split(/\n/).map(line => line.trim()).filter(Boolean).map((line, index) => {
-                const parts = line.split(/\t/);
-                return {
-                    id: `manual-${Date.now()}-${index}`,
-                    sentence: parts[0] ? String(parts[0]).trim() : "",
-                    word: parts[1] ? String(parts[1]).trim() : "",
-                    translation: parts[2] ? String(parts[2]).trim() : "",
-                };
-            }).filter(c => c.sentence && c.word);
+        try {
+          setCloudStatus("Saving to cloud…");
+          const res = await fetch(
+            `${API_BASE}/decks/${encodeURIComponent(syncId.trim())}`,
+            {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ decks }),
+            }
+          );
+          if (!res.ok) {
+            throw new Error("Bad response");
+          }
+          setCloudStatus("Saved to cloud ✅");
+        } catch (e) {
+          console.error(e);
+          setCloudStatus("Error while saving ❌");
+        }
+      };
+
+      const handleCloudLoad = async () => {
+        if (!syncId.trim()) {
+          alert("Please enter a Sync ID first.");
+          return;
+        }
+        if (!API_BASE || API_BASE.includes("YOUR-BACKEND-URL")) {
+          alert("API_BASE is not configured.");
+          return;
         }
 
-        // --- Main Component ---
-        function App() {
-            // --- State ---
-            const [activeTab, setActiveTab] = useState('folders'); 
-            const [decks, setDecks] = useState(() => {
-                try {
-                    const saved = window.localStorage.getItem("vq_decks_v2");
-                    return saved ? JSON.parse(saved) : [{ id: "deck-1", name: "General Practice", cards: [] }];
-                } catch { return [{ id: "deck-1", name: "General Practice", cards: [] }]; }
-            });
-            
-            const [activeDeckId, setActiveDeckId] = useState(decks[0]?.id || "deck-1");
-            
-            // Game State
-            const [practiceIndex, setPracticeIndex] = useState(0);
-            const [options, setOptions] = useState([]);
-            const [selectedOptionId, setSelectedOptionId] = useState(null);
-            const [feedback, setFeedback] = useState(""); // 'correct', 'wrong', or ''
-            const [revealed, setRevealed] = useState(false);
+        try {
+          setCloudStatus("Loading from cloud…");
+          const res = await fetch(
+            `${API_BASE}/decks/${encodeURIComponent(syncId.trim())}`
+          );
+          if (res.status === 404) {
+            setCloudStatus("No data found for this Sync ID.");
+            return;
+          }
+          if (!res.ok) {
+            throw new Error("Bad response");
+          }
+          const data = await res.json();
+          if (!data.decks || !Array.isArray(data.decks)) {
+            throw new Error("Invalid data");
+          }
+          setDecks(data.decks);
+          if (data.decks.length > 0) {
+            setActiveDeckId(data.decks[0].id || "deck-1");
+          }
+          setPracticeIndex(0);
+          setSelectedOptionId(null);
+          setFeedback("");
+          setRevealed(false);
+          setCloudStatus("Loaded from cloud ✅");
+        } catch (e) {
+          console.error(e);
+          setCloudStatus("Error while loading ❌");
+        }
+      };
 
-            // Import State
-            const [manualText, setManualText] = useState("");
+      const renderImportPage = () => (
+        <div
+          className={
+            "page-fade " +
+            (page === "import" ? "page-visible" : "page-hidden")
+          }
+        >
+          <p className="text-sm text-slate-300 mb-4">
+            Import sentences with a missing word, then practice them as
+            interactive quizzes. Perfect for vocab, exam prep, or movie lines
+            you want to remember.
+          </p>
 
-            // Cloud State
-            const [syncId, setSyncId] = useState("");
-            const [cloudStatus, setCloudStatus] = useState("");
+          <div className="grid md:grid-cols-[1.25fr,1fr] gap-6">
+            {/* Import */}
+            <section className="space-y-3 import-card p-4">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <span className="text-sky-400 text-base">⬇</span>
+                <span>Import into deck: {activeDeck?.name || ""}</span>
+              </h2>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Excel / CSV structure:
+                <br />
+                <span className="font-mono">
+                  A: Sentence with ____ (one blank)
+                </span>
+                <br />
+                <span className="font-mono">B: English word</span>
+                <br />
+                <span className="font-mono">
+                  C: Translation (your language)
+                </span>
+              </p>
+              <input
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                onChange={handleFileUpload}
+                className="w-full text-xs text-slate-200 file:mr-3 file:px-4 file:py-2 file:rounded-full file:border-0 file:bg-gradient-to-r file:from-sky-500 file:to-indigo-500 file:text-white hover:file:from-sky-400 hover:file:to-indigo-400 file:shadow-lg file:shadow-sky-700/40"
+              />
+              <p className="text-xs text-slate-400">
+                Or paste manually: one line per sentence in this format:
+                <br />
+                <span className="font-mono">
+                  Sentence[TAB]Word[TAB]Translation
+                </span>
+              </p>
 
-            // --- Derived State ---
-            const activeDeck = decks.find(d => d.id === activeDeckId) || decks[0];
-            const cards = activeDeck ? activeDeck.cards : [];
-            const currentCard = cards.length > 0 ? cards[practiceIndex] : null;
+              <pre className="code-box text-[11px] px-3 py-2 text-slate-200 whitespace-pre-wrap">
+I bought a new ____ yesterday.	car	car (translation)
+The firefighter was very ____ today.	brave	אמיץ
+              </pre>
+              <textarea
+                className="w-full h-32 rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500/60"
+                placeholder={`I bought a new ____ yesterday.\tcar\tcar (translation)`}
+                value={manualText}
+                onChange={(e) => setManualText(e.target.value)}
+              />
+              <button
+                onClick={handleUseManualText}
+                className="w-full inline-flex items-center justify-center rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 text-sm font-medium px-4 py-2 transition disabled:opacity-40 shadow-lg shadow-sky-800/60"
+                disabled={!manualText.trim()}
+              >
+                Replace / add sentences from text
+              </button>
+            </section>
 
-            // --- Effects ---
-            useEffect(() => {
-                window.localStorage.setItem("vq_decks_v2", JSON.stringify(decks));
-            }, [decks]);
+            {/* Sentence list */}
+            <section className="space-y-3 list-card p-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <span className="text-emerald-400 text-base">📄</span>
+                  <span>Sentences in this deck</span>
+                </h2>
+                <span className="text-xs text-slate-400">
+                  {cards.length} sentences
+                </span>
+              </div>
 
-            // Setup Quiz Options
-            useEffect(() => {
-                if (!currentCard) { setOptions([]); return; }
-                
-                // Find distractors
-                const others = cards.filter((c, idx) => idx !== practiceIndex);
-                // If not enough cards in this deck, grab random words from other decks for distractors? 
-                // For now keep logic simple: if not enough cards, just use what we have
-                const distractors = shuffleArray(others).slice(0, Math.min(3, others.length));
-                
-                const combined = shuffleArray([currentCard, ...distractors]);
-                setOptions(combined);
-                setSelectedOptionId(null);
-                setFeedback("");
-                setRevealed(false);
-            }, [currentCard, practiceIndex, cards.length]); // Added dependencies to refresh when content changes
-
-            // --- Handlers ---
-            
-            const handleNext = () => {
-                if(cards.length === 0) return;
-                setPracticeIndex((prev) => (prev + 1) % cards.length);
-            };
-
-            const handleChooseOption = (optionId) => {
-                if (revealed) return; // Prevent double guessing
-                const chosen = options.find(o => o.id === optionId);
-                setSelectedOptionId(optionId);
-                setRevealed(true);
-                
-                if (chosen.word.toLowerCase() === currentCard.word.toLowerCase()) {
-                    setFeedback("correct");
-                    speakWord(chosen.word);
-                    // Auto advance after 1.5s
-                    setTimeout(handleNext, 1500);
-                } else {
-                    setFeedback("wrong");
-                }
-            };
-
-            const handleFileUpload = (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (evt) => {
-                    const data = new Uint8Array(evt.target.result);
-                    const workbook = XLSX.read(data, { type: "array" });
-                    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
-                    
-                    const newCards = rows.filter(r => r[0] && r[1]).map((row, i) => ({
-                        id: `excel-${Date.now()}-${i}`,
-                        sentence: String(row[0]).trim(),
-                        word: String(row[1]).trim(),
-                        translation: row[2] ? String(row[2]).trim() : ""
-                    }));
-
-                    if (newCards.length) {
-                        setDecks(prev => prev.map(d => d.id === activeDeckId ? { ...d, cards: [...d.cards, ...newCards] } : d));
-                        alert(`Added ${newCards.length} sentences to "${activeDeck.name}"`);
-                    }
-                };
-                reader.readAsArrayBuffer(file);
-            };
-
-            const handleManualImport = () => {
-                const newCards = parseManualText(manualText);
-                if (newCards.length) {
-                    setDecks(prev => prev.map(d => d.id === activeDeckId ? { ...d, cards: [...d.cards, ...newCards] } : d));
-                    setManualText("");
-                    alert(`Added ${newCards.length} sentences to "${activeDeck.name}"`);
-                }
-            };
-
-            const createDeck = () => {
-                const name = prompt("Enter new folder name:");
-                if(name) {
-                    const newDeck = { id: `deck-${Date.now()}`, name, cards: [] };
-                    setDecks([...decks, newDeck]);
-                    setActiveDeckId(newDeck.id);
-                }
-            };
-
-            const deleteDeck = (id) => {
-                if(decks.length <= 1) return alert("Keep at least one folder.");
-                if(confirm("Delete this folder?")) {
-                    setDecks(decks.filter(d => d.id !== id));
-                    if(activeDeckId === id) setActiveDeckId(decks.find(d => d.id !== id).id);
-                }
-            };
-
-            const handleCloudAction = async (action) => {
-                if(!syncId) return alert("Enter a Sync ID");
-                setCloudStatus("Processing...");
-                try {
-                    const url = `${API_BASE}/decks/${encodeURIComponent(syncId)}`;
-                    const res = await fetch(url, {
-                        method: action === 'save' ? 'PUT' : 'GET',
-                        headers: { "Content-Type": "application/json" },
-                        body: action === 'save' ? JSON.stringify({ decks }) : undefined
-                    });
-                    if(!res.ok) throw new Error("Failed");
-                    
-                    if(action === 'load') {
-                        const data = await res.json();
-                        setDecks(data.decks || []);
-                    }
-                    setCloudStatus(action === 'save' ? "Saved successfully!" : "Loaded successfully!");
-                } catch(e) {
-                    setCloudStatus("Error occurred.");
-                    console.error(e);
-                }
-            };
-
-            // --- UI Components ---
-            
-            return (
-                <div className="min-h-screen bg-gray-50 text-slate-800 pb-12">
-                    
-                    {/* Navigation */}
-                    <nav className="bg-white shadow-sm sticky top-0 z-20 border-b border-gray-100">
-                        <div className="max-w-4xl mx-auto px-4">
-                            <div className="flex justify-between h-16">
-                                <div className="flex items-center gap-2">
-                                    <div className="bg-indigo-600 text-white p-1.5 rounded-lg">
-                                        <Layers size={20} />
-                                    </div>
-                                    <span className="text-xl font-bold text-gray-800 tracking-tight">LinguaFill</span>
-                                </div>
-                                <div className="flex space-x-1 items-center">
-                                    <NavButton active={activeTab === 'folders'} onClick={() => setActiveTab('folders')} icon={<BookOpen size={18} />} label="Library" />
-                                    <NavButton active={activeTab === 'import'} onClick={() => setActiveTab('import')} icon={<Upload size={18} />} label="Import" />
-                                    <NavButton active={activeTab === 'user'} onClick={() => setActiveTab('user')} icon={<User size={18} />} label="Profile" />
-                                </div>
-                            </div>
-                        </div>
-                    </nav>
-
-                    <main className="max-w-3xl mx-auto px-4 py-8">
-                        
-                        {/* --- TAB: LIBRARY & GAME --- */}
-                        {activeTab === 'folders' && (
-                            <div className="animate-fade-in grid grid-cols-1 md:grid-cols-12 gap-6">
-                                
-                                {/* Sidebar: Folder Selection */}
-                                <div className="md:col-span-4 space-y-4">
-                                    <div className="flex justify-between items-center">
-                                        <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide">My Collections</h3>
-                                        <button onClick={createDeck} className="text-indigo-600 hover:bg-indigo-50 p-1 rounded transition"><Plus size={18}/></button>
-                                    </div>
-                                    <div className="space-y-2">
-                                        {decks.map(deck => (
-                                            <div 
-                                                key={deck.id}
-                                                onClick={() => { setActiveDeckId(deck.id); setPracticeIndex(0); }}
-                                                className={`p-3 rounded-lg cursor-pointer flex justify-between items-center transition ${activeDeckId === deck.id ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'}`}
-                                            >
-                                                <div className="flex items-center gap-3 overflow-hidden">
-                                                    <BookOpen size={16} className={activeDeckId === deck.id ? "opacity-80" : "text-gray-400"} />
-                                                    <span className="truncate font-medium text-sm">{deck.name}</span>
-                                                </div>
-                                                <span className={`text-xs px-2 py-0.5 rounded-full ${activeDeckId === deck.id ? 'bg-white/20' : 'bg-gray-100'}`}>
-                                                    {deck.cards.length}
-                                                </span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    {activeDeck && (
-                                        <button onClick={() => deleteDeck(activeDeck.id)} className="w-full mt-4 flex items-center justify-center gap-2 text-xs text-red-500 hover:text-red-700 py-2">
-                                            <Trash2 size={14} /> Delete Selected Folder
-                                        </button>
-                                    )}
-                                </div>
-
-                                {/* Main: The Game Area */}
-                                <div className="md:col-span-8">
-                                    {!currentCard ? (
-                                        <div className="bg-white rounded-2xl p-12 text-center border-2 border-dashed border-gray-200">
-                                            <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-50 rounded-full mb-4 text-gray-300">
-                                                <Layers size={32} />
-                                            </div>
-                                            <h3 className="text-lg font-bold text-gray-700">This folder is empty</h3>
-                                            <p className="text-gray-500 mb-6 text-sm">Switch to the "Import" tab to add content here.</p>
-                                            <button onClick={() => setActiveTab('import')} className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-medium text-sm hover:bg-indigo-700 transition">
-                                                Go to Import
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div className="bg-white rounded-2xl shadow-xl shadow-indigo-100/50 border border-gray-100 overflow-hidden relative">
-                                            {/* Header */}
-                                            <div className="bg-gray-50 px-6 py-4 flex justify-between items-center border-b border-gray-100">
-                                                <span className="text-xs font-bold text-indigo-500 uppercase tracking-wider">{activeDeck.name}</span>
-                                                <span className="text-xs text-gray-400 font-medium">{practiceIndex + 1} / {cards.length}</span>
-                                            </div>
-                                            
-                                            <div className="p-8">
-                                                {/* Sentence */}
-                                                <div className="text-2xl text-center leading-relaxed text-slate-800 font-medium mb-10">
-                                                    {currentCard.sentence.split('____').map((part, i, arr) => (
-                                                        <React.Fragment key={i}>
-                                                            {part}
-                                                            {i < arr.length - 1 && (
-                                                                <span className={`inline-block min-w-[80px] text-center border-b-2 mx-1 transition-colors duration-300 font-bold
-                                                                    ${revealed && feedback === 'correct' ? 'border-green-500 text-green-600' : 
-                                                                      revealed && feedback === 'wrong' ? 'border-red-400 text-red-500' : 
-                                                                      'border-indigo-300 text-transparent'}`}>
-                                                                    {revealed ? currentCard.word : "?"}
-                                                                </span>
-                                                            )}
-                                                        </React.Fragment>
-                                                    ))}
-                                                </div>
-
-                                                {/* Options */}
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md mx-auto">
-                                                    {options.map(opt => {
-                                                        const isSelected = selectedOptionId === opt.id;
-                                                        const isCorrect = opt.word.toLowerCase() === currentCard.word.toLowerCase();
-                                                        
-                                                        let btnClass = "py-3.5 px-4 rounded-xl border text-sm font-medium transition-all duration-200 flex justify-between items-center ";
-                                                        
-                                                        if (revealed) {
-                                                            if (isCorrect) btnClass += "bg-green-50 border-green-500 text-green-700 ";
-                                                            else if (isSelected && !isCorrect) btnClass += "bg-red-50 border-red-500 text-red-700 shake ";
-                                                            else btnClass += "opacity-50 border-gray-100 bg-gray-50 ";
-                                                        } else {
-                                                            btnClass += "bg-white border-gray-200 text-gray-600 hover:border-indigo-400 hover:text-indigo-600 hover:shadow-sm";
-                                                        }
-
-                                                        return (
-                                                            <button 
-                                                                key={opt.id} 
-                                                                onClick={() => handleChooseOption(opt.id)}
-                                                                className={btnClass}
-                                                                disabled={revealed}
-                                                            >
-                                                                <span>{opt.word}</span>
-                                                                {revealed && isCorrect && <Check size={16} />}
-                                                                {revealed && isSelected && !isCorrect && <X size={16} />}
-                                                            </button>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-
-                                            {/* Footer / Feedback */}
-                                            <div className="h-16 bg-gray-50 border-t border-gray-100 flex items-center justify-between px-6">
-                                                <div className="flex items-center gap-3">
-                                                    {revealed && currentCard.translation && (
-                                                        <span className="text-sm text-gray-500 flex items-center gap-2 animate-fade-in">
-                                                            <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
-                                                            Translation: <span className="font-semibold text-gray-700">{currentCard.translation}</span>
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="flex gap-2">
-                                                     <button onClick={() => speakWord(currentCard.word)} className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-white rounded-full transition">
-                                                        <Play size={18} />
-                                                    </button>
-                                                    <button onClick={handleNext} className="text-sm font-bold text-indigo-600 hover:text-indigo-800 px-3 py-1 rounded hover:bg-indigo-50 transition">
-                                                        Skip / Next
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* --- TAB: IMPORT --- */}
-                        {activeTab === 'import' && (
-                            <div className="animate-fade-in max-w-2xl mx-auto space-y-6">
-                                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                                    <div className="flex items-center gap-3 mb-4">
-                                        <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600"><Upload size={20} /></div>
-                                        <div>
-                                            <h2 className="text-lg font-bold text-gray-800">Add to: {activeDeck.name}</h2>
-                                            <p className="text-xs text-gray-500">Upload Excel or paste text</p>
-                                        </div>
-                                    </div>
-
-                                    {/* File Input */}
-                                    <label className="block w-full border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:bg-gray-50 hover:border-indigo-400 transition cursor-pointer mb-6 group">
-                                        <input type="file" accept=".xlsx,.xls,.csv" onChange={handleFileUpload} className="hidden" />
-                                        <p className="text-sm text-gray-600 font-medium group-hover:text-indigo-600">Click to upload Excel / CSV</p>
-                                        <p className="text-xs text-gray-400 mt-1">Format: Column A (Sentence with ____), B (Word), C (Translation)</p>
-                                    </label>
-
-                                    <div className="relative">
-                                        <div className="absolute top-3 right-3 text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">Manual Paste</div>
-                                        <textarea 
-                                            value={manualText}
-                                            onChange={(e) => setManualText(e.target.value)}
-                                            className="w-full h-40 p-4 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none bg-gray-50 font-mono"
-                                            placeholder={`I bought a new ____.\tcar\tmachonit\nShe is very ____.\thappy\tsmecha`}
-                                        ></textarea>
-                                    </div>
-
-                                    <div className="mt-4 flex justify-end">
-                                        <button 
-                                            onClick={handleManualImport}
-                                            disabled={!manualText.trim()}
-                                            className="bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium hover:bg-indigo-700 transition flex items-center gap-2"
-                                        >
-                                            Process Text <ArrowRight size={18} />
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* --- TAB: USER & SYNC --- */}
-                        {activeTab === 'user' && (
-                            <div className="animate-fade-in max-w-2xl mx-auto space-y-6">
-                                {/* Profile Card */}
-                                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex items-center gap-5">
-                                    <div className="h-16 w-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xl font-bold shadow-lg">
-                                        ME
-                                    </div>
-                                    <div>
-                                        <h2 className="text-xl font-bold text-gray-800">My Profile</h2>
-                                        <p className="text-gray-500 text-sm">Total Collections: {decks.length}</p>
-                                    </div>
-                                </div>
-
-                                {/* Sync Card */}
-                                <div className="bg-indigo-900 text-white p-6 rounded-xl shadow-lg relative overflow-hidden">
-                                    <div className="absolute top-0 right-0 p-8 opacity-10 transform translate-x-4 -translate-y-4">
-                                        <Cloud size={100} />
-                                    </div>
-                                    
-                                    <div className="relative z-10">
-                                        <h3 className="font-bold text-lg mb-2 flex items-center gap-2"><RefreshCw size={18}/> Cloud Sync</h3>
-                                        <p className="text-indigo-200 text-sm mb-4 max-w-sm">
-                                            Enter a unique ID to sync your progress across devices.
-                                        </p>
-                                        
-                                        <div className="flex gap-2 max-w-md">
-                                            <input 
-                                                type="text" 
-                                                value={syncId} 
-                                                onChange={(e) => setSyncId(e.target.value)}
-                                                placeholder="e.g. john-english-123"
-                                                className="flex-1 bg-indigo-800/50 border border-indigo-700 rounded-lg px-4 py-2 text-sm text-white placeholder-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400" 
-                                            />
-                                        </div>
-                                        
-                                        <div className="flex gap-3 mt-4">
-                                            <button onClick={() => handleCloudAction('save')} className="bg-white text-indigo-900 px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-50 transition">
-                                                Save to Cloud
-                                            </button>
-                                            <button onClick={() => handleCloudAction('load')} className="bg-indigo-700 text-white border border-indigo-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-600 transition">
-                                                Load Data
-                                            </button>
-                                        </div>
-
-                                        {cloudStatus && (
-                                            <div className="mt-3 text-xs font-mono text-indigo-300">
-                                                Status: {cloudStatus}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Stats Grid */}
-                                <div className="grid grid-cols-3 gap-4">
-                                    <div className="bg-white p-4 rounded-xl border border-gray-200 text-center">
-                                        <div className="text-2xl font-bold text-gray-800">{decks.reduce((acc, d) => acc + d.cards.length, 0)}</div>
-                                        <div className="text-xs text-gray-400 uppercase tracking-wide mt-1">Total Words</div>
-                                    </div>
-                                    <div className="bg-white p-4 rounded-xl border border-gray-200 text-center">
-                                        <div className="text-2xl font-bold text-gray-800">{decks.length}</div>
-                                        <div className="text-xs text-gray-400 uppercase tracking-wide mt-1">Decks</div>
-                                    </div>
-                                    <div className="bg-white p-4 rounded-xl border border-gray-200 text-center">
-                                        <div className="text-2xl font-bold text-emerald-500">Active</div>
-                                        <div className="text-xs text-gray-400 uppercase tracking-wide mt-1">Status</div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                    </main>
+              {cards.length === 0 ? (
+                <div className="empty-state text-sm text-slate-300 flex flex-col items-center gap-2">
+                  <div className="text-2xl">📥</div>
+                  <div>
+                    No sentences yet. Import a file or paste text to start
+                    building your deck.
+                  </div>
                 </div>
-            );
-        }
+              ) : (
+                <div className="space-y-2 max-h-72 overflow-y-auto pr-2">
+                  {cards.map((card) => (
+                    <div
+                      key={card.id}
+                      className="flex flex-col gap-1 border border-slate-700 rounded-xl px-3 py-2 bg-slate-900/70 text-xs shadow-sm shadow-slate-900/80"
+                    >
+                      <div className="text-[11px] text-slate-400">
+                        Sentence:
+                      </div>
+                      <div className="text-slate-100">
+                        {card.sentence}
+                      </div>
+                      <div className="flex items-center justify-between mt-1">
+                        <div>
+                          <span className="font-semibold text-sky-300">
+                            {card.word}
+                          </span>
+                          {card.translation && (
+                            <span className="ml-2 text-slate-300">
+                              ({card.translation})
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => speakWord(card.word)}
+                            className="text-[11px] px-2 py-1 rounded-full border border-slate-600 hover:bg-slate-700"
+                            title="Play word in English"
+                          >
+                            🔊
+                          </button>
+                          <button
+                            onClick={() => handleDeleteCard(card.id)}
+                            className="text-[11px] px-2 py-1 rounded-full border border-red-500 text-red-300 hover:bg-red-500/20"
+                          >
+                            🗑
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+        </div>
+      );
 
-        function NavButton({ active, onClick, icon, label }) {
-            return (
-                <button 
-                    onClick={onClick}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 ${
-                        active 
-                        ? 'bg-indigo-50 text-indigo-700 font-semibold' 
-                        : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
-                    }`}
+      const renderPracticePage = () => (
+        <div
+          className={
+            "page-fade " +
+            (page === "practice" ? "page-visible" : "page-hidden")
+          }
+        >
+          {!currentCard ? (
+            <div className="empty-state text-sm text-slate-300">
+              There are no sentences to practice in this deck yet. Go to{" "}
+              <span className="font-semibold">Import & Edit</span> and load
+              some sentences first.
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-slate-300 mb-3">
+                Choose the correct word to complete the sentence. After you
+                answer, the translation appears to help you connect meaning and
+                form.
+              </p>
+
+              <div className="flex items-center justify-between text-xs text-slate-300 mb-2">
+                <span>
+                  Deck: {activeDeck?.name || ""} · Question{" "}
+                  {practiceIndex + 1} / {cards.length}
+                </span>
+              </div>
+
+              <div className="quiz-card p-4 md:p-5 space-y-4">
+                <div>
+                  <p className="text-sm mb-1 text-slate-300">
+                    Fill in the missing word:
+                  </p>
+                  <p className="text-lg font-semibold text-sky-100 leading-relaxed">
+                    {currentCard.sentence
+                      .replace("____", "<BLANK>")
+                      .split("<BLANK>")
+                      .map((part, idx, arr) => (
+                        <>
+                          {part}
+                          {idx < arr.length - 1 && (
+                            <span className="blank-chip">____</span>
+                          )}
+                        </>
+                      ))}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {options.map((opt) => {
+                    const isCorrect =
+                      opt.word.trim().toLowerCase() ===
+                      currentCard.word.trim().toLowerCase();
+                    const isSelected = selectedOptionId === opt.id;
+                    const isWrongSelected =
+                      revealed && isSelected && !isCorrect;
+
+                    return (
+                      <button
+                        key={opt.id}
+                        onClick={() => handleChooseOption(opt.id)}
+                        className={
+                          "option-button text-left rounded-xl border px-3 py-2 text-sm transition " +
+                          (isSelected
+                            ? "border-sky-400 bg-slate-800"
+                            : "border-slate-600 bg-slate-800/70 hover:bg-slate-700") +
+                          " " +
+                          (revealed && isCorrect ? "option-correct" : "") +
+                          " " +
+                          (isWrongSelected ? "option-wrong" : "")
+                        }
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium text-slate-50">
+                            {opt.word}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              speakWord(opt.word);
+                            }}
+                            className="text-[11px] px-2 py-1 rounded-full border border-slate-600 hover:bg-slate-700"
+                            title="Play word in English"
+                          >
+                            🔊
+                          </button>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {feedback && (
+                  <p className="mt-2 text-sm text-slate-100">{feedback}</p>
+                )}
+
+                {revealed && currentCard.translation && (
+                  <p className="mt-1 text-sm text-slate-200">
+                    Translation:{" "}
+                    <span className="font-semibold text-emerald-300">
+                      {currentCard.translation}
+                    </span>
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between mt-3">
+                <div className="flex gap-2">
+                  <button
+                    onClick={handlePrev}
+                    className="nav-pill text-slate-100"
+                  >
+                    ◀ Previous
+                  </button>
+                  <button
+                    onClick={handleNext}
+                    className="nav-pill text-slate-100"
+                  >
+                    Next ▶
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => setPage("import")}
+                  className="text-xs text-sky-300 hover:underline"
                 >
-                    {icon}
-                    <span className="hidden sm:inline text-sm">{label}</span>
+                  Go back to Import & Edit
                 </button>
-            );
-        }
+              </div>
+            </>
+          )}
+        </div>
+      );
 
-        const root = ReactDOM.createRoot(document.getElementById("root"));
-        root.render(<App />);
-    </script>
+      const renderCloudPage = () => (
+        <div
+          className={
+            "page-fade " +
+            (page === "cloud" ? "page-visible" : "page-hidden")
+          }
+        >
+          <p className="text-sm text-slate-300 mb-4">
+            Use cloud sync to move your decks between devices. Use the same
+            <span className="font-semibold"> Sync ID</span> on your laptop,
+            phone, or tablet and keep everything in sync.
+          </p>
+
+          <section className="sync-card p-4 flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
+            <div className="flex-1 flex flex-col gap-1">
+              <div className="flex items-center gap-2 text-xs text-slate-300">
+                <span className="text-lg">☁️</span>
+                <span>
+                  Sync ID (use the same ID on every device to share your decks):
+                </span>
+              </div>
+              <input
+                type="text"
+                value={syncId}
+                onChange={(e) => setSyncId(e.target.value)}
+                placeholder="For example: shlomi-english"
+                className="sync-input px-3 py-1.5 text-sm outline-none focus:border-sky-500 mt-1"
+              />
+              {cloudStatus && (
+                <span className="text-[11px] text-slate-300 mt-1">
+                  {cloudStatus}
+                </span>
+              )}
+            </div>
+            <div className="flex gap-2 md:flex-col">
+              <button
+                onClick={handleCloudSave}
+                className="sync-pill-btn primary-btn"
+              >
+                ☁️ Save to cloud
+              </button>
+              <button
+                onClick={handleCloudLoad}
+                className="sync-pill-btn outline-success"
+              >
+                ☁️ Load from cloud
+              </button>
+            </div>
+          </section>
+        </div>
+      );
+
+      const pageTitle =
+        page === "import"
+          ? "Import & Edit"
+          : page === "practice"
+          ? "Practice Mode"
+          : "Cloud Sync";
+
+      const pageSubtitle =
+        page === "import"
+          ? "Build your sentence decks by importing files or pasting text."
+          : page === "practice"
+          ? "Turn your sentences into quick, focused multiple-choice drills."
+          : "Move your decks between devices in just two clicks.";
+
+      return (
+        <div className="min-h-screen flex items-stretch p-4 app-root-bg">
+          {/* Sidebar */}
+          <aside className="hidden md:flex flex-col w-64 mr-4 sidebar p-4 gap-6">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="h-8 w-8 rounded-2xl bg-gradient-to-br from-sky-500 to-emerald-400 flex items-center justify-center text-xl">
+                  📚
+                </div>
+                <div>
+                  <div className="text-xs text-slate-400">
+                    Personal English Lab
+                  </div>
+                  <div className="text-sm font-semibold text-slate-50">
+                    Vocab Sentence Quiz
+                  </div>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Import sentences, practice, and sync your decks across devices.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-4 flex-1">
+              {/* Pages */}
+              <div>
+                <div className="sidebar-section-title mb-2">
+                  PAGES
+                </div>
+                <div className="flex flex-col gap-2">
+                  <button
+                    className={
+                      "nav-item " +
+                      (page === "import"
+                        ? "nav-item-active"
+                        : "nav-item-inactive")
+                    }
+                    onClick={() => setPage("import")}
+                  >
+                    <span className="nav-item-icon">📥</span>
+                    <span>Import & Edit</span>
+                  </button>
+                  <button
+                    className={
+                      "nav-item " +
+                      (page === "practice"
+                        ? "nav-item-active"
+                        : "nav-item-inactive")
+                    }
+                    onClick={() => setPage("practice")}
+                  >
+                    <span className="nav-item-icon">🎯</span>
+                    <span>Practice</span>
+                  </button>
+                  <button
+                    className={
+                      "nav-item " +
+                      (page === "cloud"
+                        ? "nav-item-active"
+                        : "nav-item-inactive")
+                    }
+                    onClick={() => setPage("cloud")}
+                  >
+                    <span className="nav-item-icon">☁️</span>
+                    <span>Cloud Sync</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Decks */}
+              <div className="flex-1 flex flex-col">
+                <div className="sidebar-section-title mb-2">
+                  DECKS
+                </div>
+                <div className="flex flex-col gap-2 flex-1 overflow-y-auto pr-1">
+                  {decks.map((deck) => (
+                    <div
+                      key={deck.id}
+                      className={
+                        "deck-pill inline-flex items-center justify-between border px-3 py-1.5 text-xs cursor-pointer " +
+                        (deck.id === activeDeckId
+                          ? "bg-sky-600/90 border-sky-300 text-slate-50"
+                          : "bg-slate-800/80 border-slate-600 text-slate-100")
+                      }
+                      onClick={() => {
+                        setActiveDeckId(deck.id);
+                        resetPractice();
+                      }}
+                    >
+                      <div className="flex items-center gap-1">
+                        <span className="text-[11px]">📂</span>
+                        <span className="font-medium">{deck.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-200">
+                          {deck.cards.length}
+                        </span>
+                        {decks.length > 1 && (
+                          <button
+                            className="text-[10px] text-slate-200 hover:text-red-300"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteDeck(deck.id);
+                            }}
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={handleAddDeck}
+                  className="mt-2 inline-flex items-center justify-center rounded-full bg-emerald-500 hover:bg-emerald-400 text-xs font-medium px-3 py-1.5 shadow-lg shadow-emerald-700/40"
+                >
+                  + New deck
+                </button>
+              </div>
+            </div>
+
+            <div className="text-[10px] text-slate-500">
+              Tip: create one deck per book / course / TV show.  
+              Sync ID + deck = your personal learning universe 🌍
+            </div>
+          </aside>
+
+          {/* Main content */}
+          <main className="flex-1 glass-panel p-6 md:p-8 relative overflow-hidden">
+            {/* Header */}
+            <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+              <div>
+                <h1 className="app-gradient-title text-3xl md:text-4xl font-semibold mb-1">
+                  Vocabulary Sentence Quiz
+                </h1>
+                <div className="app-title-underline" />
+                <p className="mt-3 text-sm text-slate-300 max-w-2xl">
+                  Turn any list of sentences into a smart quiz. Practice the
+                  right word in the right context, not just isolated vocabulary.
+                </p>
+              </div>
+
+              <div className="text-right text-xs text-slate-400">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 border border-slate-700">
+                  <span className="text-emerald-400">●</span>
+                  <span>Active deck: </span>
+                  <span className="font-semibold text-slate-100">
+                    {activeDeck?.name}
+                  </span>
+                  <span className="text-slate-400">
+                    ({cards.length} cards)
+                  </span>
+                </div>
+                <div className="mt-1">
+                  Current page:{" "}
+                  <span className="font-medium text-slate-100">
+                    {pageTitle}
+                  </span>
+                </div>
+              </div>
+            </header>
+
+            {/* Page title in main */}
+            <div className="mb-4">
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                {page === "import" && <span>📥</span>}
+                {page === "practice" && <span>🎯</span>}
+                {page === "cloud" && <span>☁️</span>}
+                <span>{pageTitle}</span>
+              </h2>
+              <p className="text-xs text-slate-300 mt-1">
+                {pageSubtitle}
+              </p>
+            </div>
+
+            {/* Pages with simple fade transition */}
+            <div className="relative min-h-[260px]">
+              {renderImportPage()}
+              {renderPracticePage()}
+              {renderCloudPage()}
+            </div>
+          </main>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
 </body>
 </html>

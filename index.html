@@ -1,10 +1,791 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he">
 <head>
   <meta charset="UTF-8" />
-  <title>TEST PAGE</title>
+  <title>Vocabulary Sentence Quiz</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Tailwind בשביל עיצוב מהיר -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.css"
+    rel="stylesheet"
+  />
 </head>
-<body style="background:#020617; color:#fff; font-size:32px; text-align:center; padding-top:80px;">
-  TEST V1 🚀
+<body class="bg-slate-950 text-slate-50">
+  <div id="root"></div>
+
+  <!-- React + ReactDOM + Babel -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- ספריית XLSX לקריאת קבצי אקסל / CSV -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const API_BASE = "https://vocab-backend-lbum.onrender.com";
+
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.onvoiceschanged = () => {};
+    }
+
+    function shuffleArray(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function parseManualText(raw) {
+      return raw
+        .split(/\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line, index) => {
+          const parts = line.split(/\t/);
+          const sentence = parts[0] ? String(parts[0]).trim() : "";
+          const word = parts[1] ? String(parts[1]).trim() : "";
+          const translation = parts[2] ? String(parts[2]).trim() : "";
+
+          return {
+            id: `manual-${Date.now()}-${index}`,
+            sentence,
+            word,
+            translation,
+          };
+        })
+        .filter((c) => c.sentence && c.word);
+    }
+
+    function speakWord(word) {
+      if (!("speechSynthesis" in window)) {
+        alert("הדפדפן שלך לא תומך בהקראת טקסט.");
+        return;
+      }
+
+      const text = String(word || "").trim();
+      if (!text) return;
+
+      const utter = new SpeechSynthesisUtterance(text);
+
+      let voices = window.speechSynthesis.getVoices() || [];
+      const preferred =
+        voices.find((v) =>
+          v.name.toLowerCase().includes("samantha")
+        ) ||
+        voices.find((v) =>
+          v.name.toLowerCase().includes("google us")
+        ) ||
+        voices.find((v) =>
+          (v.lang || "").toLowerCase().startsWith("en")
+        );
+
+      if (preferred) {
+        utter.voice = preferred;
+      }
+
+      utter.lang = "en-US";
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utter);
+    }
+
+    function App() {
+      const [decks, setDecks] = useState(() => {
+        if (typeof window !== "undefined") {
+          try {
+            const saved = window.localStorage.getItem("vq_decks_v1");
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              if (Array.isArray(parsed) && parsed.length) {
+                return parsed;
+              }
+            }
+          } catch (e) {
+            console.warn("Failed to load decks from storage", e);
+          }
+        }
+        return [{ id: "deck-1", name: "Default", cards: [] }];
+      });
+
+      const [activeDeckId, setActiveDeckId] = useState("deck-1");
+      const [manualText, setManualText] = useState("");
+      const [mode, setMode] = useState("edit"); // "edit" | "practice"
+      const [practiceIndex, setPracticeIndex] = useState(0);
+      const [options, setOptions] = useState([]);
+      const [selectedOptionId, setSelectedOptionId] = useState(null);
+      const [feedback, setFeedback] = useState("");
+      const [revealed, setRevealed] = useState(false);
+
+      const [syncId, setSyncId] = useState("");
+      const [cloudStatus, setCloudStatus] = useState("");
+
+      const activeDeck =
+        decks.find((d) => d.id === activeDeckId) || decks[0];
+      const cards = activeDeck ? activeDeck.cards : [];
+      const hasCards = cards.length > 0;
+      const currentCard = hasCards ? cards[practiceIndex] : null;
+
+      useEffect(() => {
+        try {
+          window.localStorage.setItem("vq_decks_v1", JSON.stringify(decks));
+        } catch (e) {
+          console.warn("Failed to save decks to storage", e);
+        }
+      }, [decks]);
+
+      useEffect(() => {
+        if (!hasCards || !currentCard) {
+          setOptions([]);
+          return;
+        }
+
+        const others = cards.filter((c, idx) => idx !== practiceIndex);
+        const distractors = shuffleArray(others).slice(
+          0,
+          Math.min(3, others.length)
+        );
+        const combined = shuffleArray([currentCard, ...distractors]);
+
+        setOptions(combined);
+        setSelectedOptionId(null);
+        setFeedback("");
+        setRevealed(false);
+      }, [cards, practiceIndex, hasCards, currentCard]);
+
+      const resetPractice = () => {
+        setPracticeIndex(0);
+        setSelectedOptionId(null);
+        setFeedback("");
+        setRevealed(false);
+      };
+
+      const replaceCardsInActiveDeck = (newCards) => {
+        setDecks((prev) =>
+          prev.map((deck) =>
+            deck.id === activeDeckId ? { ...deck, cards: newCards } : deck
+          )
+        );
+        resetPractice();
+      };
+
+      const handleFileUpload = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const data = new Uint8Array(evt.target.result);
+          const workbook = XLSX.read(data, { type: "array" });
+          const firstSheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[firstSheetName];
+          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+          const newCards = rows
+            .filter((row) => row && row[0] && row[1])
+            .map((row, index) => {
+              const sentence = String(row[0]).trim();
+              const word = String(row[1]).trim();
+              const translation = row[2] ? String(row[2]).trim() : "";
+
+              return {
+                id: `excel-${Date.now()}-${index}`,
+                sentence,
+                word,
+                translation,
+              };
+            })
+            .filter((c) => c.sentence && c.word);
+
+          if (newCards.length) {
+            replaceCardsInActiveDeck(newCards);
+          }
+        };
+
+        reader.readAsArrayBuffer(file);
+      };
+
+      const handleUseManualText = () => {
+        const parsed = parseManualText(manualText);
+        if (parsed.length) {
+          replaceCardsInActiveDeck(parsed);
+        }
+      };
+
+      const handlePrev = () => {
+        if (!hasCards) return;
+        setPracticeIndex((prev) =>
+          prev - 1 < 0 ? cards.length - 1 : prev - 1
+        );
+      };
+
+      const handleNext = () => {
+        if (!hasCards) return;
+        setPracticeIndex((prev) => (prev + 1) % cards.length);
+      };
+
+      const handleChooseOption = (optionId) => {
+        if (!currentCard || !options.length) return;
+        const chosen = options.find((o) => o.id === optionId);
+        if (!chosen) return;
+
+        setSelectedOptionId(optionId);
+        setRevealed(true);
+
+        if (
+          chosen.word.trim().toLowerCase() ===
+          currentCard.word.trim().toLowerCase()
+        ) {
+          setFeedback("נכון! 🎉");
+        } else {
+          setFeedback(
+            `לא מדויק. המילה הנכונה היא "${currentCard.word}".`
+          );
+        }
+      };
+
+      const handleDeleteCard = (cardId) => {
+        setDecks((prev) =>
+          prev.map((deck) =>
+            deck.id === activeDeckId
+              ? {
+                  ...deck,
+                  cards: deck.cards.filter((c) => c.id !== cardId),
+                }
+              : deck
+          )
+        );
+        resetPractice();
+      };
+
+      const handleAddDeck = () => {
+        const name = prompt("שם תיקייה חדש (למשל: Amir A / Movies / Work):");
+        if (!name || !name.trim()) return;
+        const id = `deck-${Date.now()}`;
+        const newDeck = { id, name: name.trim(), cards: [] };
+        setDecks((prev) => [...prev, newDeck]);
+        setActiveDeckId(id);
+        resetPractice();
+      };
+
+      const handleDeleteDeck = (deckId) => {
+        if (decks.length === 1) {
+          alert("לא ניתן למחוק את התיקייה היחידה.");
+          return;
+        }
+        const deck = decks.find((d) => d.id === deckId);
+        const ok = confirm(
+          `למחוק את התיקייה "${deck?.name}" וכל המשפטים שבה?`
+        );
+        if (!ok) return;
+
+        setDecks((prev) => prev.filter((d) => d.id !== deckId));
+        if (activeDeckId === deckId) {
+          const remaining = decks.filter((d) => d.id !== deckId);
+          if (remaining.length > 0) {
+            setActiveDeckId(remaining[0].id);
+          }
+        }
+        resetPractice();
+      };
+
+      const handleCloudSave = async () => {
+        if (!syncId.trim()) {
+          alert("קודם תכתוב Sync ID (למשל: השם שלך באנגלית).");
+          return;
+        }
+        if (!API_BASE || API_BASE.includes("YOUR-BACKEND-URL")) {
+          alert("לא הוגדר API_BASE. צריך לעדכן את כתובת השרת בקוד.");
+          return;
+        }
+
+        try {
+          setCloudStatus("שומר לענן...");
+          const res = await fetch(
+            `${API_BASE}/decks/${encodeURIComponent(syncId.trim())}`,
+            {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ decks }),
+            }
+          );
+          if (!res.ok) {
+            throw new Error("Bad response");
+          }
+          setCloudStatus("נשמר בענן ✅");
+        } catch (e) {
+          console.error(e);
+          setCloudStatus("שגיאה בשמירה לענן ❌");
+        }
+      };
+
+      const handleCloudLoad = async () => {
+        if (!syncId.trim()) {
+          alert("קודם תכתוב Sync ID (למשל: השם שלך באנגלית).");
+          return;
+        }
+        if (!API_BASE || API_BASE.includes("YOUR-BACKEND-URL")) {
+          alert("לא הוגדר API_BASE. צריך לעדכן את כתובת השרת בקוד.");
+          return;
+        }
+
+        try {
+          setCloudStatus("טוען מהענן...");
+          const res = await fetch(
+            `${API_BASE}/decks/${encodeURIComponent(syncId.trim())}`
+          );
+          if (res.status === 404) {
+            setCloudStatus("לא נמצא מידע לסנכרון הזה.");
+            return;
+          }
+          if (!res.ok) {
+            throw new Error("Bad response");
+          }
+          const data = await res.json();
+          if (!data.decks || !Array.isArray(data.decks)) {
+            throw new Error("Invalid data");
+          }
+          setDecks(data.decks);
+          if (data.decks.length > 0) {
+            setActiveDeckId(data.decks[0].id || "deck-1");
+          }
+          setPracticeIndex(0);
+          setSelectedOptionId(null);
+          setFeedback("");
+          setRevealed(false);
+          setCloudStatus("נטען מהענן ✅");
+        } catch (e) {
+          console.error(e);
+          setCloudStatus("שגיאה בטעינה מהענן ❌");
+        }
+      };
+
+      const feedbackClass = feedback
+        ? feedback.includes("נכון") || feedback.includes("Correct")
+          ? "bg-emerald-500/10 border border-emerald-500/60 text-emerald-200"
+          : "bg-rose-500/10 border border-rose-500/60 text-rose-200"
+        : "";
+
+      // כותרת למעלה לפי מצב
+      const currentPageTitle =
+        mode === "edit" ? "ייבוא ועריכת משפטים" : "תרגול – Quiz Mode";
+
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-3 md:p-6">
+          <div className="w-full max-w-6xl rounded-3xl bg-slate-900/90 border border-slate-800 shadow-2xl backdrop-blur-md overflow-hidden">
+            <div className="grid md:grid-cols-[240px,1fr] min-h-[520px]">
+              {/* SIDEBAR – App style */}
+              <aside className="bg-slate-950/80 border-r border-slate-800 p-4 md:p-5 flex flex-col gap-6">
+                {/* Logo / Title */}
+                <div>
+                  <div className="inline-flex items-center gap-2 rounded-full bg-sky-500/10 px-3 py-1 text-xs text-sky-300 border border-sky-500/30">
+                    <span>📚</span>
+                    <span>Personal English Lab</span>
+                  </div>
+                  <h1 className="mt-3 text-xl font-semibold leading-tight">
+                    Vocab Sentence Quiz
+                  </h1>
+                  <p className="mt-1 text-xs text-slate-400">
+                    יבוא, תרגול וסנכרון דקים בין מכשירים.
+                  </p>
+                </div>
+
+                {/* Navigation */}
+                <nav className="space-y-2">
+                  <div className="text-[11px] uppercase tracking-wide text-slate-500 mb-1">
+                    Pages
+                  </div>
+                  <button
+                    onClick={() => setMode("edit")}
+                    className={`w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm transition ${
+                      mode === "edit"
+                        ? "bg-sky-600 text-white shadow"
+                        : "bg-slate-900/60 text-slate-200 hover:bg-slate-800"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      📥 <span>Import & Edit</span>
+                    </span>
+                    <span className="text-[10px]">CTRL+1</span>
+                  </button>
+                  <button
+                    onClick={() => setMode("practice")}
+                    disabled={!hasCards}
+                    className={`w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm transition ${
+                      mode === "practice"
+                        ? "bg-emerald-600 text-white shadow"
+                        : "bg-slate-900/60 text-slate-200 hover:bg-slate-800"
+                    } ${!hasCards ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    <span className="flex items-center gap-2">
+                      🎮 <span>Practice</span>
+                    </span>
+                    <span className="text-[10px]">CTRL+2</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      // סתם גלילה למטה לסנכרון, שלא ישנה לוגיקה
+                      const el = document.getElementById("cloud-sync");
+                      if (el) el.scrollIntoView({ behavior: "smooth" });
+                    }}
+                    className="w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm bg-slate-900/60 text-slate-200 hover:bg-slate-800 transition"
+                  >
+                    <span className="flex items-center gap-2">
+                      ☁️ <span>Cloud Sync</span>
+                    </span>
+                    <span className="text-[10px]">Sync</span>
+                  </button>
+                </nav>
+
+                {/* Decks */}
+                <div className="mt-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] uppercase tracking-wide text-slate-500">
+                      Decks
+                    </span>
+                    <button
+                      onClick={handleAddDeck}
+                      className="text-[11px] text-emerald-300 hover:text-emerald-200"
+                    >
+                      + New
+                    </button>
+                  </div>
+                  <div className="space-y-1 max-h-40 overflow-auto pr-1">
+                    {decks.map((deck) => (
+                      <button
+                        key={deck.id}
+                        onClick={() => {
+                          setActiveDeckId(deck.id);
+                          resetPractice();
+                        }}
+                        className={`w-full flex items-center justify-between rounded-lg px-3 py-1.5 text-xs text-left transition ${
+                          deck.id === activeDeckId
+                            ? "bg-sky-600/80 text-white"
+                            : "bg-slate-900/70 text-slate-200 hover:bg-slate-800"
+                        }`}
+                      >
+                        <span className="truncate">{deck.name}</span>
+                        <span className="text-[10px] opacity-80">
+                          {deck.cards.length} cards
+                        </span>
+                      </button>
+                    ))}
+                    {decks.length === 0 && (
+                      <p className="text-xs text-slate-500">
+                        אין עדיין דקים, צור אחד חדש.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Cloud sync (sidebar mini) */}
+                <div
+                  id="cloud-sync"
+                  className="mt-auto rounded-2xl bg-slate-900/80 border border-slate-800 px-3 py-3 space-y-2"
+                >
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="flex items-center gap-1">
+                      ☁️ <span>Cloud Sync</span>
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    value={syncId}
+                    onChange={(e) => setSyncId(e.target.value)}
+                    placeholder="Sync ID (למשל: shlomi-english)"
+                    className="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-2 py-1.5 text-[11px] outline-none focus:border-sky-500"
+                  />
+                  <div className="flex gap-1 mt-1">
+                    <button
+                      onClick={handleCloudSave}
+                      className="flex-1 rounded-lg bg-sky-600 hover:bg-sky-500 text-[11px] py-1"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={handleCloudLoad}
+                      className="flex-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-[11px] py-1"
+                    >
+                      Load
+                    </button>
+                  </div>
+                  {cloudStatus && (
+                    <div className="mt-1 text-[10px] text-slate-400">
+                      {cloudStatus}
+                    </div>
+                  )}
+                </div>
+              </aside>
+
+              {/* MAIN AREA */}
+              <main className="p-4 md:p-6 flex flex-col gap-4">
+                {/* Top bar inside main */}
+                <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                  <div>
+                    <p className="text-[11px] text-slate-400">
+                      Active deck:{" "}
+                      <span className="text-slate-100 font-medium">
+                        {activeDeck?.name || ""}
+                      </span>{" "}
+                      · {cards.length} cards
+                    </p>
+                    <h2 className="text-2xl md:text-3xl font-semibold mt-1">
+                      {currentPageTitle}
+                    </h2>
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                    <span className="hidden sm:inline">
+                      Tip: צרו דק לכל ספר / קורס / סרט.
+                    </span>
+                  </div>
+                </header>
+
+                {/* CONTENT */}
+                {mode === "edit" && (
+                  <div className="grid lg:grid-cols-[1.1fr,0.9fr] gap-5 mt-2">
+                    {/* Import card */}
+                    <section className="rounded-2xl bg-slate-900/80 border border-slate-800 p-4 space-y-3">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        📥 Import into deck:{" "}
+                        <span className="text-sky-300">
+                          {activeDeck?.name || ""}
+                        </span>
+                      </h3>
+                      <p className="text-xs text-slate-300 leading-relaxed">
+                        Excel / CSV structure:
+                        <br />
+                        <span className="font-mono">
+                          A: Sentence with ____ (one blank)
+                        </span>
+                        <br />
+                        <span className="font-mono">B: English word</span>
+                        <br />
+                        <span className="font-mono">
+                          C: Translation (your language)
+                        </span>
+                      </p>
+                      <input
+                        type="file"
+                        accept=".xlsx,.xls,.csv"
+                        onChange={handleFileUpload}
+                        className="w-full text-xs text-slate-200 file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-sky-500 file:text-white hover:file:bg-sky-400"
+                      />
+                      <p className="text-xs text-slate-400">
+                        אפשר גם להדביק ידנית: כל שורה בפורמט:
+                        <br />
+                        Sentence[TAB]Word[TAB]Translation
+                      </p>
+
+                      <pre className="text-[11px] bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 whitespace-pre-wrap">
+I bought a new ____ yesterday.	car	מכונית
+The firefighter was very ____ today.	brave	אמיץ
+                      </pre>
+                      <textarea
+                        className="w-full h-32 rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm outline-none focus:border-sky-500"
+                        placeholder={`I bought a new ____ yesterday.\tcar\tמכונית`}
+                        value={manualText}
+                        onChange={(e) => setManualText(e.target.value)}
+                      />
+                      <button
+                        onClick={handleUseManualText}
+                        className="w-full inline-flex items-center justify-center rounded-xl bg-sky-500 hover:bg-sky-400 text-sm font-medium px-4 py-2 transition disabled:opacity-40"
+                        disabled={!manualText.trim()}
+                      >
+                        החלף / הוסף משפטים לפי הטקסט
+                      </button>
+                    </section>
+
+                    {/* Sentences list card */}
+                    <section className="rounded-2xl bg-slate-900/80 border border-slate-800 p-4 flex flex-col">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                          📃 Sentences in deck
+                        </h3>
+                        <span className="text-xs text-slate-400">
+                          {cards.length} משפטים
+                        </span>
+                      </div>
+
+                      {cards.length === 0 ? (
+                        <p className="text-sm text-slate-400">
+                          אין משפטים עדיין בתיקייה הזו. טען קובץ או הדבק טקסט.
+                        </p>
+                      ) : (
+                        <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                          {cards.map((card) => (
+                            <div
+                              key={card.id}
+                              className="flex flex-col gap-1 border border-slate-800 rounded-xl px-3 py-2 bg-slate-950/70 text-xs"
+                            >
+                              <div className="text-[11px] text-slate-400">
+                                Sentence
+                              </div>
+                              <div className="text-slate-100">
+                                {card.sentence}
+                              </div>
+                              <div className="flex items-center justify-between mt-1">
+                                <div>
+                                  <span className="font-semibold text-sky-200">
+                                    {card.word}
+                                  </span>
+                                  {card.translation && (
+                                    <span className="ml-2 text-slate-300">
+                                      ({card.translation})
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => speakWord(card.word)}
+                                    className="text-[11px] px-2 py-1 rounded-lg border border-slate-700 hover:bg-slate-800"
+                                    title="השמע באנגלית"
+                                  >
+                                    🔊
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteCard(card.id)}
+                                    className="text-[11px] px-2 py-1 rounded-lg border border-rose-500 text-rose-300 hover:bg-rose-500/20"
+                                  >
+                                    🗑
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </section>
+                  </div>
+                )}
+
+                {/* PRACTICE */}
+                {mode === "practice" && (
+                  <div className="mt-2 flex items-center justify-center">
+                    {!currentCard ? (
+                      <p className="text-sm text-slate-400">
+                        אין משפטים לתרגול בתיקייה הזו. חזור ל"Import & Edit" וטעין
+                        משפטים.
+                      </p>
+                    ) : (
+                      <div className="w-full max-w-2xl space-y-4">
+                        <div className="rounded-3xl bg-slate-900/90 border border-slate-800 shadow-xl p-5 md:p-7 space-y-6">
+                          <div className="flex items-center justify-between text-[11px] text-slate-400">
+                            <span>
+                              Deck: {activeDeck?.name || ""} · Q{" "}
+                              {practiceIndex + 1} / {cards.length}
+                            </span>
+                          </div>
+
+                          <div>
+                            <p className="text-xs mb-2 text-center text-slate-300">
+                              השלם את המילה החסרה במשפט:
+                            </p>
+                            <p className="text-2xl md:text-3xl font-semibold text-center text-sky-200">
+                              {currentCard.sentence}
+                            </p>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                            {options.map((opt) => {
+                              const isCorrect =
+                                opt.word.trim().toLowerCase() ===
+                                currentCard.word.trim().toLowerCase();
+                              const isSelected = selectedOptionId === opt.id;
+
+                              let base =
+                                "text-left rounded-2xl border px-4 py-3 text-base md:text-lg transition flex items-center justify-between gap-2";
+                              let stateClasses = "";
+
+                              if (isSelected) {
+                                stateClasses =
+                                  "border-sky-400 bg-slate-800";
+                              } else {
+                                stateClasses =
+                                  "border-slate-700 bg-slate-900 hover:bg-slate-800";
+                              }
+                              if (revealed && isCorrect) {
+                                stateClasses += " border-emerald-400";
+                              }
+
+                              return (
+                                <button
+                                  key={opt.id}
+                                  onClick={() => handleChooseOption(opt.id)}
+                                  className={`${base} ${stateClasses}`}
+                                >
+                                  <span className="font-medium">
+                                    {opt.word}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      speakWord(opt.word);
+                                    }}
+                                    className="text-xs px-2 py-1 rounded-lg border border-slate-700 hover:bg-slate-800"
+                                    title="השמע באנגלית"
+                                  >
+                                    🔊
+                                  </button>
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {revealed && (
+                            <div
+                              className={`mt-4 rounded-xl px-4 py-3 text-sm text-center ${feedbackClass}`}
+                            >
+                              <div>{feedback}</div>
+                              {currentCard.translation && (
+                                <div className="mt-1 text-slate-100">
+                                  תרגום:{" "}
+                                  <span className="font-semibold">
+                                    {currentCard.translation}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between mt-1 text-xs">
+                          <div className="space-x-2">
+                            <button
+                              onClick={handlePrev}
+                              className="rounded-xl border border-slate-700 px-3 py-1.5 hover:bg-slate-800"
+                            >
+                              קודם
+                            </button>
+                            <button
+                              onClick={handleNext}
+                              className="rounded-xl border border-slate-700 px-3 py-1.5 hover:bg-slate-800"
+                            >
+                              הבא
+                            </button>
+                          </div>
+
+                          <button
+                            onClick={() => setMode("edit")}
+                            className="text-sky-300 hover:underline"
+                          >
+                            חזרה ל־Import & Edit
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </main>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
 </body>
 </html>

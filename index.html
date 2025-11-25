@@ -4,11 +4,12 @@
   <meta charset="UTF-8" />
   <title>Vocabulary Sentence Quiz</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <!-- Tailwind דרך ה־CDN הרשמי -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind בשביל עיצוב מהיר -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.css"
+    rel="stylesheet"
+  />
 </head>
-
 <body class="bg-slate-950 text-slate-50">
   <div id="root"></div>
 
@@ -17,7 +18,7 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <!-- XLSX -->
+  <!-- ספריית XLSX לקריאת קבצי אקסל / CSV -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <script type="text/babel">
@@ -25,10 +26,12 @@
 
     const API_BASE = "https://vocab-backend-lbum.onrender.com";
 
+    // לוודא שהקולות נטענים (כרום/מק)
     if ("speechSynthesis" in window) {
       window.speechSynthesis.onvoiceschanged = () => {};
     }
 
+    // ערבוב אקראי של מערך
     function shuffleArray(array) {
       const arr = [...array];
       for (let i = arr.length - 1; i > 0; i--) {
@@ -38,15 +41,15 @@
       return arr;
     }
 
-    // ⭐ עכשיו תומך גם בטאבים וגם בלפחות שני רווחים
+    // פירסינג של טקסט ידני:
+    // sentence \t word \t translation
     function parseManualText(raw) {
       return raw
         .split(/\n/)
         .map((line) => line.trim())
         .filter(Boolean)
         .map((line, index) => {
-          // מפריד לפי TAB או 2+ רווחים
-          const parts = line.split(/\t+|\s{2,}/);
+          const parts = line.split(/\t/);
           const sentence = parts[0] ? String(parts[0]).trim() : "";
           const word = parts[1] ? String(parts[1]).trim() : "";
           const translation = parts[2] ? String(parts[2]).trim() : "";
@@ -56,11 +59,30 @@
             sentence,
             word,
             translation,
+            status: "unknown", // חדש: סטטוס לכרטיס
           };
         })
         .filter((c) => c.sentence && c.word);
     }
 
+    // נורמליזציה של דקים קיימים מהענן / localStorage
+    function normalizeDecks(raw) {
+      if (!Array.isArray(raw)) return [];
+      return raw.map((deck, deckIndex) => ({
+        ...deck,
+        id: deck.id || `deck-${deckIndex}-${Date.now()}`,
+        name: deck.name || `Deck ${deckIndex + 1}`,
+        cards: Array.isArray(deck.cards)
+          ? deck.cards.map((card, cardIndex) => ({
+              ...card,
+              id: card.id || `card-${deckIndex}-${cardIndex}-${Date.now()}`,
+              status: card.status || "unknown",
+            }))
+          : [],
+      }));
+    }
+
+    // השמעת מילה באנגלית
     function speakWord(word) {
       if (!("speechSynthesis" in window)) {
         alert("הדפדפן שלך לא תומך בהקראת טקסט.");
@@ -94,6 +116,7 @@
     }
 
     function App() {
+      // 🔹 State: תיקיות + סנכרון
       const [decks, setDecks] = useState(() => {
         if (typeof window !== "undefined") {
           try {
@@ -101,7 +124,7 @@
             if (saved) {
               const parsed = JSON.parse(saved);
               if (Array.isArray(parsed) && parsed.length) {
-                return parsed;
+                return normalizeDecks(parsed);
               }
             }
           } catch (e) {
@@ -113,10 +136,7 @@
 
       const [activeDeckId, setActiveDeckId] = useState("deck-1");
       const [manualText, setManualText] = useState("");
-
-      // ⭐ עכשיו יש 3 מצבים: edit | practice | cloud
-      const [mode, setMode] = useState("edit");
-
+      const [mode, setMode] = useState("edit"); // "edit" | "practice" | "test"
       const [practiceIndex, setPracticeIndex] = useState(0);
       const [options, setOptions] = useState([]);
       const [selectedOptionId, setSelectedOptionId] = useState(null);
@@ -130,8 +150,17 @@
         decks.find((d) => d.id === activeDeckId) || decks[0];
       const cards = activeDeck ? activeDeck.cards : [];
       const hasCards = cards.length > 0;
-      const currentCard = hasCards ? cards[practiceIndex] : null;
 
+      // 🔎 כרטיסים רלוונטיים למצב תרגול/מבחן
+      const quizCards =
+        mode === "test"
+          ? cards.filter((c) => (c.status || "unknown") !== "known")
+          : cards;
+
+      const hasQuizCards = quizCards.length > 0;
+      const currentCard = hasQuizCards ? quizCards[practiceIndex] : null;
+
+      // שמירת התיקיות ב-localStorage
       useEffect(() => {
         try {
           window.localStorage.setItem("vq_decks_v1", JSON.stringify(decks));
@@ -140,13 +169,14 @@
         }
       }, [decks]);
 
+      // בניית אופציות בכל פעם שהשאלה מתחלפת
       useEffect(() => {
-        if (!hasCards || !currentCard) {
+        if (!hasQuizCards || !currentCard) {
           setOptions([]);
           return;
         }
 
-        const others = cards.filter((c, idx) => idx !== practiceIndex);
+        const others = quizCards.filter((c, idx) => idx !== practiceIndex);
         const distractors = shuffleArray(others).slice(
           0,
           Math.min(3, others.length)
@@ -157,7 +187,7 @@
         setSelectedOptionId(null);
         setFeedback("");
         setRevealed(false);
-      }, [cards, practiceIndex, hasCards, currentCard]);
+      }, [quizCards, practiceIndex, hasQuizCards, currentCard]);
 
       const resetPractice = () => {
         setPracticeIndex(0);
@@ -166,15 +196,61 @@
         setRevealed(false);
       };
 
+      const switchMode = (nextMode) => {
+        setMode(nextMode);
+        resetPractice();
+      };
+
+      // 🔁 עדכון סטטוס של כרטיס (unknown / learning / known)
+      const updateCardStatus = (cardId, isCorrect) => {
+        setDecks((prev) =>
+          prev.map((deck) => {
+            if (deck.id !== activeDeckId) return deck;
+            const updatedCards = deck.cards.map((card) => {
+              if (card.id !== cardId) return card;
+              let status = card.status || "unknown";
+              if (isCorrect) {
+                if (status === "unknown") status = "learning";
+                else if (status === "learning") status = "known";
+                // אם כבר known – נשאר known
+              } else {
+                status = "unknown";
+              }
+              return { ...card, status };
+            });
+            return { ...deck, cards: updatedCards };
+          })
+        );
+      };
+
+      // סימון כרטיס כ"לא יודע" באופן ידני (כפתור ניחוש)
+      const markCardUnknown = (cardId) => {
+        setDecks((prev) =>
+          prev.map((deck) => {
+            if (deck.id !== activeDeckId) return deck;
+            const updatedCards = deck.cards.map((card) =>
+              card.id === cardId ? { ...card, status: "unknown" } : card
+            );
+            return { ...deck, cards: updatedCards };
+          })
+        );
+      };
+
+      // עדכון תיקייה פעילה עם כרטיסים חדשים
       const replaceCardsInActiveDeck = (newCards) => {
+        const normalizedCards = newCards.map((c) => ({
+          ...c,
+          status: c.status || "unknown",
+        }));
         setDecks((prev) =>
           prev.map((deck) =>
-            deck.id === activeDeckId ? { ...deck, cards: newCards } : deck
+            deck.id === activeDeckId ? { ...deck, cards: normalizedCards } : deck
           )
         );
         resetPractice();
       };
 
+      // ייבוא מאקסל / CSV
       const handleFileUpload = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -199,6 +275,7 @@
                 sentence,
                 word,
                 translation,
+                status: "unknown",
               };
             })
             .filter((c) => c.sentence && c.word);
@@ -211,25 +288,24 @@
         reader.readAsArrayBuffer(file);
       };
 
+      // ייבוא טקסט ידני (משפט \t מילה \t תרגום)
       const handleUseManualText = () => {
         const parsed = parseManualText(manualText);
         if (parsed.length) {
           replaceCardsInActiveDeck(parsed);
-          // אפשר לרוקן אחרי הטענה אם תרצה:
-          // setManualText("");
         }
       };
 
       const handlePrev = () => {
-        if (!hasCards) return;
+        if (!hasQuizCards) return;
         setPracticeIndex((prev) =>
-          prev - 1 < 0 ? cards.length - 1 : prev - 1
+          prev - 1 < 0 ? quizCards.length - 1 : prev - 1
         );
       };
 
       const handleNext = () => {
-        if (!hasCards) return;
-        setPracticeIndex((prev) => (prev + 1) % cards.length);
+        if (!hasQuizCards) return;
+        setPracticeIndex((prev) => (prev + 1) % quizCards.length);
       };
 
       const handleChooseOption = (optionId) => {
@@ -240,15 +316,21 @@
         setSelectedOptionId(optionId);
         setRevealed(true);
 
-        if (
+        const isCorrect =
           chosen.word.trim().toLowerCase() ===
-          currentCard.word.trim().toLowerCase()
-        ) {
+          currentCard.word.trim().toLowerCase();
+
+        if (isCorrect) {
           setFeedback("נכון! 🎉");
         } else {
           setFeedback(
             `לא מדויק. המילה הנכונה היא "${currentCard.word}".`
           );
+        }
+
+        // במצב Test בלבד – מעדכן סטטוס ידע
+        if (mode === "test") {
+          updateCardStatus(currentCard.id, isCorrect);
         }
       };
 
@@ -297,6 +379,7 @@
         resetPractice();
       };
 
+      // 🔗 שמירה לענן
       const handleCloudSave = async () => {
         if (!syncId.trim()) {
           alert("קודם תכתוב Sync ID (למשל: השם שלך באנגלית).");
@@ -327,6 +410,7 @@
         }
       };
 
+      // 🔗 טעינה מהענן
       const handleCloudLoad = async () => {
         if (!syncId.trim()) {
           alert("קודם תכתוב Sync ID (למשל: השם שלך באנגלית).");
@@ -353,14 +437,11 @@
           if (!data.decks || !Array.isArray(data.decks)) {
             throw new Error("Invalid data");
           }
-          setDecks(data.decks);
+          setDecks(normalizeDecks(data.decks));
           if (data.decks.length > 0) {
             setActiveDeckId(data.decks[0].id || "deck-1");
           }
-          setPracticeIndex(0);
-          setSelectedOptionId(null);
-          setFeedback("");
-          setRevealed(false);
+          resetPractice();
           setCloudStatus("נטען מהענן ✅");
         } catch (e) {
           console.error(e);
@@ -374,20 +455,23 @@
           : "bg-rose-500/10 border border-rose-500/60 text-rose-200"
         : "";
 
+      // כותרת למעלה לפי מצב
       const currentPageTitle =
         mode === "edit"
-          ? "Import & Edit"
+          ? "ייבוא ועריכת משפטים"
           : mode === "practice"
-          ? "תרגול – Quiz Mode"
-          : "Cloud Sync";
+          ? "תרגול חופשי – Practice"
+          : "Test Mode – בחינה חכמה";
+
+      const totalQuizCards = quizCards.length;
 
       return (
         <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-3 md:p-6">
-          {/* ⭐ הגדלתי ל-max-w-7xl כדי למלא יותר את המסך */}
-          <div className="w-full max-w-7xl rounded-3xl bg-slate-900/90 border border-slate-800 shadow-2xl backdrop-blur-md overflow-hidden">
-            <div className="grid md:grid-cols-[260px,1fr] min-h-[540px]">
-              {/* SIDEBAR */}
+          <div className="w-full max-w-6xl rounded-3xl bg-slate-900/90 border border-slate-800 shadow-2xl backdrop-blur-md overflow-hidden">
+            <div className="grid md:grid-cols-[240px,1fr] min-h-[520px]">
+              {/* SIDEBAR – App style */}
               <aside className="bg-slate-950/80 border-r border-slate-800 p-4 md:p-5 flex flex-col gap-6">
+                {/* Logo / Title */}
                 <div>
                   <div className="inline-flex items-center gap-2 rounded-full bg-sky-500/10 px-3 py-1 text-xs text-sky-300 border border-sky-500/30">
                     <span>📚</span>
@@ -397,7 +481,7 @@
                     Vocab Sentence Quiz
                   </h1>
                   <p className="mt-1 text-xs text-slate-400">
-                    יבוא, תרגול וסנכרון דקים בין מכשירים.
+                    יבוא, תרגול, בחינה וסנכרון דקים בין מכשירים.
                   </p>
                 </div>
 
@@ -407,7 +491,7 @@
                     Pages
                   </div>
                   <button
-                    onClick={() => setMode("edit")}
+                    onClick={() => switchMode("edit")}
                     className={`w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm transition ${
                       mode === "edit"
                         ? "bg-sky-600 text-white shadow"
@@ -420,7 +504,7 @@
                     <span className="text-[10px]">CTRL+1</span>
                   </button>
                   <button
-                    onClick={() => setMode("practice")}
+                    onClick={() => switchMode("practice")}
                     disabled={!hasCards}
                     className={`w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm transition ${
                       mode === "practice"
@@ -434,12 +518,25 @@
                     <span className="text-[10px]">CTRL+2</span>
                   </button>
                   <button
-                    onClick={() => setMode("cloud")}
+                    onClick={() => switchMode("test")}
+                    disabled={!hasCards}
                     className={`w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm transition ${
-                      mode === "cloud"
-                        ? "bg-indigo-600 text-white shadow"
+                      mode === "test"
+                        ? "bg-purple-600 text-white shadow"
                         : "bg-slate-900/60 text-slate-200 hover:bg-slate-800"
-                    }`}
+                    } ${!hasCards ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    <span className="flex items-center gap-2">
+                      🧪 <span>Test</span>
+                    </span>
+                    <span className="text-[10px]">CTRL+3</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      const el = document.getElementById("cloud-sync");
+                      if (el) el.scrollIntoView({ behavior: "smooth" });
+                    }}
+                    className="w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm bg-slate-900/60 text-slate-200 hover:bg-slate-800 transition"
                   >
                     <span className="flex items-center gap-2">
                       ☁️ <span>Cloud Sync</span>
@@ -489,7 +586,7 @@
                   </div>
                 </div>
 
-                {/* Cloud mini widget בסיידבר */}
+                {/* Cloud sync (sidebar mini) */}
                 <div
                   id="cloud-sync"
                   className="mt-auto rounded-2xl bg-slate-900/80 border border-slate-800 px-3 py-3 space-y-2"
@@ -528,8 +625,9 @@
                 </div>
               </aside>
 
-              {/* MAIN */}
+              {/* MAIN AREA */}
               <main className="p-4 md:p-6 flex flex-col gap-4">
+                {/* Top bar inside main */}
                 <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                   <div>
                     <p className="text-[11px] text-slate-400">
@@ -550,9 +648,10 @@
                   </div>
                 </header>
 
-                {/* EDIT PAGE */}
+                {/* מצב ייבוא / עריכה */}
                 {mode === "edit" && (
                   <div className="grid lg:grid-cols-[1.1fr,0.9fr] gap-5 mt-2">
+                    {/* Import card */}
                     <section className="rounded-2xl bg-slate-900/80 border border-slate-800 p-4 space-y-3">
                       <h3 className="text-lg font-semibold flex items-center gap-2">
                         📥 Import into deck:{" "}
@@ -580,19 +679,18 @@
                         className="w-full text-xs text-slate-200 file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-sky-500 file:text-white hover:file:bg-sky-400"
                       />
                       <p className="text-xs text-slate-400">
-                        אפשר גם להדביק ידנית: כל שורה בפורמט
-                        (TAB או לפחות שני רווחים):
+                        אפשר גם להדביק ידנית: כל שורה בפורמט:
                         <br />
                         Sentence[TAB]Word[TAB]Translation
                       </p>
 
                       <pre className="text-[11px] bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 whitespace-pre-wrap">
-I bought a new ____ yesterday.  car  מכונית
-The firefighter was very ____ today.  brave  אמיץ
+I bought a new ____ yesterday.	car	מכונית
+The firefighter was very ____ today.	brave	אמיץ
                       </pre>
                       <textarea
                         className="w-full h-32 rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm outline-none focus:border-sky-500"
-                        placeholder={`I bought a new ____ yesterday.  car  מכונית`}
+                        placeholder={`I bought a new ____ yesterday.\tcar\tמכונית`}
                         value={manualText}
                         onChange={(e) => setManualText(e.target.value)}
                       />
@@ -605,6 +703,7 @@ The firefighter was very ____ today.  brave  אמיץ
                       </button>
                     </section>
 
+                    {/* Sentences list card */}
                     <section className="rounded-2xl bg-slate-900/80 border border-slate-800 p-4 flex flex-col">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -633,15 +732,22 @@ The firefighter was very ____ today.  brave  אמיץ
                                 {card.sentence}
                               </div>
                               <div className="flex items-center justify-between mt-1">
-                                <div>
+                                <div className="flex items-center gap-1 flex-wrap">
                                   <span className="font-semibold text-sky-200">
                                     {card.word}
                                   </span>
                                   {card.translation && (
-                                    <span className="ml-2 text-slate-300">
+                                    <span className="ml-1 text-slate-300">
                                       ({card.translation})
                                     </span>
                                   )}
+                                  <span className="ml-2 inline-flex items-center rounded-full bg-slate-900/80 border border-slate-700 px-2 py-0.5 text-[10px] text-slate-300">
+                                    {card.status === "known"
+                                      ? "Known"
+                                      : card.status === "learning"
+                                      ? "Learning"
+                                      : "New"}
+                                  </span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <button
@@ -667,13 +773,16 @@ The firefighter was very ____ today.  brave  אמיץ
                   </div>
                 )}
 
-                {/* PRACTICE PAGE */}
-                {mode === "practice" && (
+                {/* PRACTICE + TEST */}
+                {(mode === "practice" || mode === "test") && (
                   <div className="mt-2 flex items-center justify-center">
                     {!currentCard ? (
                       <p className="text-sm text-slate-400">
-                        אין משפטים לתרגול בתיקייה הזו. חזור ל"Import & Edit" וטעין
-                        משפטים.
+                        {cards.length === 0
+                          ? 'אין משפטים בדק הזה. חזור ל־"Import & Edit" וטעין משפטים.'
+                          : mode === "test" && cards.length > 0 && !hasQuizCards
+                          ? "אין כרטיסים למבחן כרגע — כל המשפטים סומנו כ-Known 🎉"
+                          : "אין כרטיסים מתאימים למצב הנוכחי."}
                       </p>
                     ) : (
                       <div className="w-full max-w-2xl space-y-4">
@@ -681,8 +790,11 @@ The firefighter was very ____ today.  brave  אמיץ
                           <div className="flex items-center justify-between text-[11px] text-slate-400">
                             <span>
                               Deck: {activeDeck?.name || ""} · Q{" "}
-                              {practiceIndex + 1} / {cards.length}
+                              {practiceIndex + 1} / {totalQuizCards}
                             </span>
+                            {mode === "test" && (
+                              <span>בוחן רק משפטים שאינם Known</span>
+                            )}
                           </div>
 
                           <div>
@@ -754,6 +866,15 @@ The firefighter was very ____ today.  brave  אמיץ
                                   </span>
                                 </div>
                               )}
+
+                              {mode === "test" && (
+                                <button
+                                  onClick={() => markCardUnknown(currentCard.id)}
+                                  className="mt-2 text-[11px] text-rose-300 hover:text-rose-200 underline"
+                                >
+                                  ❗ ניחשתי / לא בטוח – אל תספור כ"Known"
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>
@@ -775,7 +896,7 @@ The firefighter was very ____ today.  brave  אמיץ
                           </div>
 
                           <button
-                            onClick={() => setMode("edit")}
+                            onClick={() => switchMode("edit")}
                             className="text-sky-300 hover:underline"
                           >
                             חזרה ל־Import & Edit
@@ -783,62 +904,6 @@ The firefighter was very ____ today.  brave  אמיץ
                         </div>
                       </div>
                     )}
-                  </div>
-                )}
-
-                {/* CLOUD PAGE */}
-                {mode === "cloud" && (
-                  <div className="mt-4 flex items-center justify-center">
-                    <div className="w-full max-w-xl rounded-3xl bg-slate-900/90 border border-slate-800 shadow-xl p-6 md:p-8 space-y-4">
-                      <h3 className="text-xl font-semibold flex items-center gap-2">
-                        ☁️ Cloud Sync
-                      </h3>
-                      <p className="text-sm text-slate-300">
-                        שמור את כל ה־decks שלך בענן, וטעין אותם מכל מכשיר אחר
-                        באמצעות אותו <span className="font-mono">Sync ID</span>.
-                      </p>
-
-                      <div className="space-y-2">
-                        <label className="text-xs text-slate-300">
-                          Sync ID (אותו מזהה בכל מכשיר):
-                        </label>
-                        <input
-                          type="text"
-                          value={syncId}
-                          onChange={(e) => setSyncId(e.target.value)}
-                          placeholder="למשל: shlomi-english"
-                          className="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm outline-none focus:border-sky-500"
-                        />
-                      </div>
-
-                      <div className="flex gap-3">
-                        <button
-                          onClick={handleCloudSave}
-                          className="flex-1 rounded-xl bg-sky-600 hover:bg-sky-500 text-sm font-medium py-2"
-                        >
-                          שמור לענן
-                        </button>
-                        <button
-                          onClick={handleCloudLoad}
-                          className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-sm font-medium py-2"
-                        >
-                          טען מהענן
-                        </button>
-                      </div>
-
-                      {cloudStatus && (
-                        <div className="text-xs text-slate-300">
-                          {cloudStatus}
-                        </div>
-                      )}
-
-                      <p className="text-[11px] text-slate-400 mt-2">
-                        טיפ: אפשר ליצור Sync ID שונה לכל משתמש (למשל:{" "}
-                        <span className="font-mono">shlomi-laptop</span>,{" "}
-                        <span className="font-mono">shlomi-phone</span>) או
-                        פשוט אחד קבוע לכל המכשירים.
-                      </p>
-                    </div>
                   </div>
                 )}
               </main>

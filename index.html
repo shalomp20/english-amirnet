@@ -11,7 +11,7 @@
   />
 </head>
 <body class="bg-slate-950 text-slate-50">
-  <div id="root"></div> 
+  <div id="root"></div>
 
   <!-- React + ReactDOM + Babel -->
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -21,15 +21,18 @@
   <!-- ספריית XLSX לקריאת קבצי אקסל / CSV -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-  <script type="text/babel">
+  <!-- קוד האפליקציה -->
+  <script type="text/babel" data-presets="env,react">
     const { useState, useEffect } = React;
 
     const API_BASE = "https://vocab-backend-lbum.onrender.com";
 
+    // לוודא שקולות נטענים
     if ("speechSynthesis" in window) {
       window.speechSynthesis.onvoiceschanged = () => {};
     }
 
+    // ערבוב אקראי
     function shuffleArray(array) {
       const arr = [...array];
       for (let i = arr.length - 1; i > 0; i--) {
@@ -39,10 +42,11 @@
       return arr;
     }
 
+    // פירסינג טקסט ידני: sentence \t word \t translation
     function parseManualText(raw) {
       return raw
         .split(/\n/)
-        .map((line) => line.trim())
+        .map(line => line.trim())
         .filter(Boolean)
         .map((line, index) => {
           const parts = line.split(/\t/);
@@ -51,15 +55,16 @@
           const translation = parts[2] ? String(parts[2]).trim() : "";
 
           return {
-            id: `manual-${Date.now()}-${index}`,
+            id: "manual-" + Date.now() + "-" + index,
             sentence,
             word,
-            translation,
+            translation
           };
         })
-        .filter((c) => c.sentence && c.word);
+        .filter(c => c.sentence && c.word);
     }
 
+    // השמעת מילה באנגלית
     function speakWord(word) {
       if (!("speechSynthesis" in window)) {
         alert("הדפדפן שלך לא תומך בהקראת טקסט.");
@@ -71,17 +76,11 @@
 
       const utter = new SpeechSynthesisUtterance(text);
 
-      let voices = window.speechSynthesis.getVoices() || [];
-      const preferred =
-        voices.find((v) =>
-          v.name.toLowerCase().includes("samantha")
-        ) ||
-        voices.find((v) =>
-          v.name.toLowerCase().includes("google us")
-        ) ||
-        voices.find((v) =>
-          (v.lang || "").toLowerCase().startsWith("en")
-        );
+      const voices = window.speechSynthesis.getVoices() || [];
+      let preferred =
+        voices.find(v => v.name && v.name.toLowerCase().includes("samantha")) ||
+        voices.find(v => v.name && v.name.toLowerCase().includes("google us")) ||
+        voices.find(v => (v.lang || "").toLowerCase().startsWith("en"));
 
       if (preferred) {
         utter.voice = preferred;
@@ -93,18 +92,19 @@
     }
 
     function App() {
+      // Decks + localStorage
       const [decks, setDecks] = useState(() => {
         if (typeof window !== "undefined") {
           try {
             const saved = window.localStorage.getItem("vq_decks_v1");
             if (saved) {
               const parsed = JSON.parse(saved);
-              if (Array.isArray(parsed) && parsed.length) {
+              if (Array.isArray(parsed) && parsed.length > 0) {
                 return parsed;
               }
             }
           } catch (e) {
-            console.warn("Failed to load decks from storage", e);
+            console.warn("Failed to load decks", e);
           }
         }
         return [{ id: "deck-1", name: "Default", cards: [] }];
@@ -123,19 +123,21 @@
       const [cloudStatus, setCloudStatus] = useState("");
 
       const activeDeck =
-        decks.find((d) => d.id === activeDeckId) || decks[0];
+        decks.find(d => d.id === activeDeckId) || decks[0];
       const cards = activeDeck ? activeDeck.cards : [];
       const hasCards = cards.length > 0;
       const currentCard = hasCards ? cards[practiceIndex] : null;
 
+      // שמירה ל-localStorage
       useEffect(() => {
         try {
           window.localStorage.setItem("vq_decks_v1", JSON.stringify(decks));
         } catch (e) {
-          console.warn("Failed to save decks to storage", e);
+          console.warn("Failed to save decks", e);
         }
       }, [decks]);
 
+      // בניית אופציות לכל שאלה
       useEffect(() => {
         if (!hasCards || !currentCard) {
           setOptions([]);
@@ -155,28 +157,29 @@
         setRevealed(false);
       }, [cards, practiceIndex, hasCards, currentCard]);
 
-      const resetPractice = () => {
+      function resetPractice() {
         setPracticeIndex(0);
         setSelectedOptionId(null);
         setFeedback("");
         setRevealed(false);
-      };
+      }
 
-      const replaceCardsInActiveDeck = (newCards) => {
-        setDecks((prev) =>
-          prev.map((deck) =>
+      function replaceCardsInActiveDeck(newCards) {
+        setDecks(prev =>
+          prev.map(deck =>
             deck.id === activeDeckId ? { ...deck, cards: newCards } : deck
           )
         );
         resetPractice();
-      };
+      }
 
-      const handleFileUpload = (e) => {
-        const file = e.target.files?.[0];
+      // ייבוא קובץ
+      function handleFileUpload(e) {
+        const file = e.target.files && e.target.files[0];
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = (evt) => {
+        reader.onload = evt => {
           const data = new Uint8Array(evt.target.result);
           const workbook = XLSX.read(data, { type: "array" });
           const firstSheetName = workbook.SheetNames[0];
@@ -184,51 +187,52 @@
           const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
           const newCards = rows
-            .filter((row) => row && row[0] && row[1])
+            .filter(row => row && row[0] && row[1])
             .map((row, index) => {
               const sentence = String(row[0]).trim();
               const word = String(row[1]).trim();
               const translation = row[2] ? String(row[2]).trim() : "";
 
               return {
-                id: `excel-${Date.now()}-${index}`,
+                id: "excel-" + Date.now() + "-" + index,
                 sentence,
                 word,
-                translation,
+                translation
               };
             })
-            .filter((c) => c.sentence && c.word);
+            .filter(c => c.sentence && c.word);
 
-          if (newCards.length) {
+          if (newCards.length > 0) {
             replaceCardsInActiveDeck(newCards);
           }
         };
 
         reader.readAsArrayBuffer(file);
-      };
+      }
 
-      const handleUseManualText = () => {
+      // ייבוא טקסט ידני
+      function handleUseManualText() {
         const parsed = parseManualText(manualText);
-        if (parsed.length) {
+        if (parsed.length > 0) {
           replaceCardsInActiveDeck(parsed);
         }
-      };
+      }
 
-      const handlePrev = () => {
+      function handlePrev() {
         if (!hasCards) return;
-        setPracticeIndex((prev) =>
+        setPracticeIndex(prev =>
           prev - 1 < 0 ? cards.length - 1 : prev - 1
         );
-      };
+      }
 
-      const handleNext = () => {
+      function handleNext() {
         if (!hasCards) return;
-        setPracticeIndex((prev) => (prev + 1) % cards.length);
-      };
+        setPracticeIndex(prev => (prev + 1) % cards.length);
+      }
 
-      const handleChooseOption = (optionId) => {
+      function handleChooseOption(optionId) {
         if (!currentCard || !options.length) return;
-        const chosen = options.find((o) => o.id === optionId);
+        const chosen = options.find(o => o.id === optionId);
         if (!chosen) return;
 
         setSelectedOptionId(optionId);
@@ -240,63 +244,61 @@
         ) {
           setFeedback("נכון! 🎉");
         } else {
-          setFeedback(
-            `לא מדויק. המילה הנכונה היא "${currentCard.word}".`
-          );
+          setFeedback('לא מדויק. המילה הנכונה היא "' + currentCard.word + '".');
         }
-      };
+      }
 
-      const handleDeleteCard = (cardId) => {
-        setDecks((prev) =>
-          prev.map((deck) =>
+      function handleDeleteCard(cardId) {
+        setDecks(prev =>
+          prev.map(deck =>
             deck.id === activeDeckId
               ? {
                   ...deck,
-                  cards: deck.cards.filter((c) => c.id !== cardId),
+                  cards: deck.cards.filter(c => c.id !== cardId)
                 }
               : deck
           )
         );
         resetPractice();
-      };
+      }
 
-      const handleAddDeck = () => {
+      function handleAddDeck() {
         const name = prompt("שם תיקייה חדש (למשל: Amir A / Movies / Work):");
         if (!name || !name.trim()) return;
-        const id = `deck-${Date.now()}`;
+        const id = "deck-" + Date.now();
         const newDeck = { id, name: name.trim(), cards: [] };
-        setDecks((prev) => [...prev, newDeck]);
+        setDecks(prev => [...prev, newDeck]);
         setActiveDeckId(id);
         resetPractice();
-      };
+      }
 
-      const handleDeleteDeck = (deckId) => {
+      function handleDeleteDeck(deckId) {
         if (decks.length === 1) {
           alert("לא ניתן למחוק את התיקייה היחידה.");
           return;
         }
-        const deck = decks.find((d) => d.id === deckId);
+        const deck = decks.find(d => d.id === deckId);
         const ok = confirm(
-          `למחוק את התיקייה "${deck?.name}" וכל המשפטים שבה?`
+          'למחוק את התיקייה "' + (deck ? deck.name : "") + '" וכל המשפטים שבה?'
         );
         if (!ok) return;
 
-        setDecks((prev) => prev.filter((d) => d.id !== deckId));
+        setDecks(prev => prev.filter(d => d.id !== deckId));
         if (activeDeckId === deckId) {
-          const remaining = decks.filter((d) => d.id !== deckId);
+          const remaining = decks.filter(d => d.id !== deckId);
           if (remaining.length > 0) {
             setActiveDeckId(remaining[0].id);
           }
         }
         resetPractice();
-      };
+      }
 
-      const handleCloudSave = async () => {
+      async function handleCloudSave() {
         if (!syncId.trim()) {
           alert("קודם תכתוב Sync ID (למשל: השם שלך באנגלית).");
           return;
         }
-        if (!API_BASE || API_BASE.includes("YOUR-BACKEND-URL")) {
+        if (!API_BASE || API_BASE.indexOf("YOUR-BACKEND-URL") !== -1) {
           alert("לא הוגדר API_BASE. צריך לעדכן את כתובת השרת בקוד.");
           return;
         }
@@ -304,29 +306,29 @@
         try {
           setCloudStatus("שומר לענן...");
           const res = await fetch(
-            `${API_BASE}/decks/${encodeURIComponent(syncId.trim())}`,
+            API_BASE + "/decks/" + encodeURIComponent(syncId.trim()),
             {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ decks }),
+              body: JSON.stringify({ decks })
             }
           );
           if (!res.ok) {
             throw new Error("Bad response");
           }
-          setCloudStatus("נשמר לענן ✅");
+          setCloudStatus("נשמר בענן ✅");
         } catch (e) {
           console.error(e);
           setCloudStatus("שגיאה בשמירה לענן ❌");
         }
-      };
+      }
 
-      const handleCloudLoad = async () => {
+      async function handleCloudLoad() {
         if (!syncId.trim()) {
           alert("קודם תכתוב Sync ID (למשל: השם שלך באנגלית).");
           return;
         }
-        if (!API_BASE || API_BASE.includes("YOUR-BACKEND-URL")) {
+        if (!API_BASE || API_BASE.indexOf("YOUR-BACKEND-URL") !== -1) {
           alert("לא הוגדר API_BASE. צריך לעדכן את כתובת השרת בקוד.");
           return;
         }
@@ -334,7 +336,7 @@
         try {
           setCloudStatus("טוען מהענן...");
           const res = await fetch(
-            `${API_BASE}/decks/${encodeURIComponent(syncId.trim())}`
+            API_BASE + "/decks/" + encodeURIComponent(syncId.trim())
           );
           if (res.status === 404) {
             setCloudStatus("לא נמצא מידע לסנכרון הזה.");
@@ -349,7 +351,12 @@
           }
           setDecks(data.decks);
           if (data.decks.length > 0) {
-            setActiveDeckId(data.decks[0].id || "deck-1");
+            const firstDeck = data.decks[0];
+            if (firstDeck && firstDeck.id) {
+              setActiveDeckId(firstDeck.id);
+            } else {
+              setActiveDeckId("deck-1");
+            }
           }
           setPracticeIndex(0);
           setSelectedOptionId(null);
@@ -360,16 +367,18 @@
           console.error(e);
           setCloudStatus("שגיאה בטעינה מהענן ❌");
         }
-      };
+      }
 
       const feedbackClass = feedback
-        ? feedback.includes("נכון") || feedback.includes("Correct")
+        ? feedback.indexOf("נכון") !== -1 || feedback.indexOf("Correct") !== -1
           ? "bg-emerald-500/10 border border-emerald-500/60 text-emerald-200"
           : "bg-rose-500/10 border border-rose-500/60 text-rose-200"
         : "";
 
       const currentPageTitle =
         mode === "edit" ? "ייבוא ועריכת משפטים" : "תרגול – Quiz Mode";
+
+      const activeDeckName = activeDeck ? activeDeck.name : "";
 
       return (
         <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-3 md:p-6">
@@ -396,40 +405,45 @@
                   </div>
                   <button
                     onClick={() => setMode("edit")}
-                    className={`w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm transition ${
-                      mode === "edit"
+                    className={
+                      "w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm transition " +
+                      (mode === "edit"
                         ? "bg-sky-600 text-white shadow"
-                        : "bg-slate-900/60 text-slate-200 hover:bg-slate-800"
-                    }`}
+                        : "bg-slate-900/60 text-slate-200 hover:bg-slate-800")
+                    }
                   >
                     <span className="flex items-center gap-2">
-                      📥 <span>Import & Edit</span>
+                      <span>📥</span> <span>Import &amp; Edit</span>
                     </span>
                     <span className="text-[10px]">CTRL+1</span>
                   </button>
                   <button
                     onClick={() => setMode("practice")}
                     disabled={!hasCards}
-                    className={`w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm transition ${
-                      mode === "practice"
+                    className={
+                      "w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm transition " +
+                      (mode === "practice"
                         ? "bg-emerald-600 text-white shadow"
-                        : "bg-slate-900/60 text-slate-200 hover:bg-slate-800"
-                    } ${!hasCards ? "opacity-50 cursor-not-allowed" : ""}`}
+                        : "bg-slate-900/60 text-slate-200 hover:bg-slate-800") +
+                      (!hasCards ? " opacity-50 cursor-not-allowed" : "")
+                    }
                   >
                     <span className="flex items-center gap-2">
-                      🎮 <span>Practice</span>
+                      <span>🎮</span> <span>Practice</span>
                     </span>
                     <span className="text-[10px]">CTRL+2</span>
                   </button>
                   <button
                     onClick={() => {
                       const el = document.getElementById("cloud-sync");
-                      if (el) el.scrollIntoView({ behavior: "smooth" });
+                      if (el) {
+                        el.scrollIntoView({ behavior: "smooth" });
+                      }
                     }}
                     className="w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm bg-slate-900/60 text-slate-200 hover:bg-slate-800 transition"
                   >
                     <span className="flex items-center gap-2">
-                      ☁️ <span>Cloud Sync</span>
+                      <span>☁️</span> <span>Cloud Sync</span>
                     </span>
                     <span className="text-[10px]">Sync</span>
                   </button>
@@ -448,18 +462,19 @@
                     </button>
                   </div>
                   <div className="space-y-1 max-h-40 overflow-auto pr-1">
-                    {decks.map((deck) => (
+                    {decks.map(deck => (
                       <button
                         key={deck.id}
                         onClick={() => {
                           setActiveDeckId(deck.id);
                           resetPractice();
                         }}
-                        className={`w-full flex items-center justify-between rounded-lg px-3 py-1.5 text-xs text-left transition ${
-                          deck.id === activeDeckId
+                        className={
+                          "w-full flex items-center justify-between rounded-lg px-3 py-1.5 text-xs text-left transition " +
+                          (deck.id === activeDeckId
                             ? "bg-sky-600/80 text-white"
-                            : "bg-slate-900/70 text-slate-200 hover:bg-slate-800"
-                        }`}
+                            : "bg-slate-900/70 text-slate-200 hover:bg-slate-800")
+                        }
                       >
                         <span className="truncate">{deck.name}</span>
                         <span className="text-[10px] opacity-80">
@@ -481,13 +496,13 @@
                 >
                   <div className="flex items-center justify-between text-xs">
                     <span className="flex items-center gap-1">
-                      ☁️ <span>Cloud Sync</span>
+                      <span>☁️</span> <span>Cloud Sync</span>
                     </span>
                   </div>
                   <input
                     type="text"
                     value={syncId}
-                    onChange={(e) => setSyncId(e.target.value)}
+                    onChange={e => setSyncId(e.target.value)}
                     placeholder="Sync ID (למשל: shlomi-english)"
                     className="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-2 py-1.5 text-[11px] outline-none focus:border-sky-500"
                   />
@@ -520,7 +535,7 @@
                     <p className="text-[11px] text-slate-400">
                       Active deck:{" "}
                       <span className="text-slate-100 font-medium">
-                        {activeDeck?.name || ""}
+                        {activeDeckName}
                       </span>{" "}
                       · {cards.length} cards
                     </p>
@@ -535,13 +550,17 @@
                   </div>
                 </header>
 
+                {/* מצב ייבוא / עריכה */}
                 {mode === "edit" && (
                   <div className="grid lg:grid-cols-[1.1fr,0.9fr] gap-5 mt-2">
                     <section className="rounded-2xl bg-slate-900/80 border border-slate-800 p-4 space-y-3">
                       <h3 className="text-lg font-semibold flex items-center gap-2">
-                        📥 Import into deck:{" "}
-                        <span className="text-sky-300">
-                          {activeDeck?.name || ""}
+                        <span>📥</span>
+                        <span>
+                          Import into deck:{" "}
+                          <span className="text-sky-300">
+                            {activeDeckName}
+                          </span>
                         </span>
                       </h3>
                       <p className="text-xs text-slate-300 leading-relaxed">
@@ -575,9 +594,9 @@ The firefighter was very ____ today.	brave	אמיץ
                       </pre>
                       <textarea
                         className="w-full h-32 rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm outline-none focus:border-sky-500"
-                        placeholder={`I bought a new ____ yesterday.\tcar\tמכונית`}
+                        placeholder={"I bought a new ____ yesterday.\tcar\tמכונית"}
                         value={manualText}
-                        onChange={(e) => setManualText(e.target.value)}
+                        onChange={e => setManualText(e.target.value)}
                       />
                       <button
                         onClick={handleUseManualText}
@@ -591,7 +610,8 @@ The firefighter was very ____ today.	brave	אמיץ
                     <section className="rounded-2xl bg-slate-900/80 border border-slate-800 p-4 flex flex-col">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="text-lg font-semibold flex items-center gap-2">
-                          📃 Sentences in deck
+                          <span>📃</span>
+                          <span>Sentences in deck</span>
                         </h3>
                         <span className="text-xs text-slate-400">
                           {cards.length} משפטים
@@ -604,7 +624,7 @@ The firefighter was very ____ today.	brave	אמיץ
                         </p>
                       ) : (
                         <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-                          {cards.map((card) => (
+                          {cards.map(card => (
                             <div
                               key={card.id}
                               className="flex flex-col gap-1 border border-slate-800 rounded-xl px-3 py-2 bg-slate-950/70 text-xs"
@@ -650,11 +670,12 @@ The firefighter was very ____ today.	brave	אמיץ
                   </div>
                 )}
 
+                {/* מצב תרגול */}
                 {mode === "practice" && (
                   <div className="mt-2 flex items-center justify-center">
                     {!currentCard ? (
                       <p className="text-sm text-slate-400">
-                        אין משפטים לתרגול בתיקייה הזו. חזור ל"Import & Edit" וטעין
+                        אין משפטים לתרגול בתיקייה הזו. חזור ל"Import &amp; Edit" וטעין
                         משפטים.
                       </p>
                     ) : (
@@ -662,7 +683,7 @@ The firefighter was very ____ today.	brave	אמיץ
                         <div className="rounded-3xl bg-slate-900/90 border border-slate-800 shadow-xl p-5 md:p-7 space-y-6">
                           <div className="flex items-center justify-between text-[11px] text-slate-400">
                             <span>
-                              Deck: {activeDeck?.name || ""} · Q{" "}
+                              Deck: {activeDeckName} · Q{" "}
                               {practiceIndex + 1} / {cards.length}
                             </span>
                           </div>
@@ -677,7 +698,7 @@ The firefighter was very ____ today.	brave	אמיץ
                           </div>
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-                            {options.map((opt) => {
+                            {options.map(opt => {
                               const isCorrect =
                                 opt.word.trim().toLowerCase() ===
                                 currentCard.word.trim().toLowerCase();
@@ -688,8 +709,7 @@ The firefighter was very ____ today.	brave	אמיץ
                               let stateClasses = "";
 
                               if (isSelected) {
-                                stateClasses =
-                                  "border-sky-400 bg-slate-800";
+                                stateClasses = "border-sky-400 bg-slate-800";
                               } else {
                                 stateClasses =
                                   "border-slate-700 bg-slate-900 hover:bg-slate-800";
@@ -702,14 +722,14 @@ The firefighter was very ____ today.	brave	אמיץ
                                 <button
                                   key={opt.id}
                                   onClick={() => handleChooseOption(opt.id)}
-                                  className={`${base} ${stateClasses}`}
+                                  className={base + " " + stateClasses}
                                 >
                                   <span className="font-medium">
                                     {opt.word}
                                   </span>
                                   <button
                                     type="button"
-                                    onClick={(e) => {
+                                    onClick={e => {
                                       e.stopPropagation();
                                       speakWord(opt.word);
                                     }}
@@ -725,7 +745,10 @@ The firefighter was very ____ today.	brave	אמיץ
 
                           {revealed && (
                             <div
-                              className={`mt-4 rounded-xl px-4 py-3 text-sm text-center ${feedbackClass}`}
+                              className={
+                                "mt-4 rounded-xl px-4 py-3 text-sm text-center " +
+                                feedbackClass
+                              }
                             >
                               <div>{feedback}</div>
                               {currentCard.translation && (
@@ -760,7 +783,7 @@ The firefighter was very ____ today.	brave	אמיץ
                             onClick={() => setMode("edit")}
                             className="text-sky-300 hover:underline"
                           >
-                            חזרה ל־Import & Edit
+                            חזרה ל־Import &amp; Edit
                           </button>
                         </div>
                       </div>
